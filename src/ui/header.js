@@ -35,41 +35,47 @@ function sessionDisplayName(session) {
   return cwd.split(/[/\\]/).pop() || cwd;
 }
 
+function getCwdFolder(session) {
+  const cwd = session.cwd || '';
+  return cwd.split(/[/\\]/).pop() || cwd;
+}
+
 function formatSessionNav(allSessions, currentIdx) {
-  if (!allSessions || allSessions.length <= 1) return '';
+  if (!allSessions || allSessions.length <= 1) return [];
 
-  // 현재 세션 주변 최대 5개만 표시 (윈도우 슬라이딩)
-  const maxVisible = 5;
-  let start = Math.max(0, currentIdx - Math.floor(maxVisible / 2));
-  let end = Math.min(allSessions.length, start + maxVisible);
-  if (end - start < maxVisible) {
-    start = Math.max(0, end - maxVisible);
-  }
-
-  const parts = [];
-
-  if (start > 0) {
-    parts.push(`{gray-fg}\u25C0 ${start} more{/gray-fg} `);
-  }
-
-  for (let i = start; i < end; i++) {
-    const s = allSessions[i];
-    const name = sessionDisplayName(s);
-    const sid = (s.sessionId || '').substring(0, 4);
-    const age = s.startedAt ? formatDuration(Date.now() - new Date(s.startedAt).getTime()) : '';
-
-    if (i === currentIdx) {
-      parts.push(`{white-bg}{black-fg} ${i + 1}/${allSessions.length} ${name} ${sid} ${age} {/black-fg}{/white-bg}`);
-    } else {
-      parts.push(`{gray-fg}${i + 1}:${name}{/gray-fg}`);
+  // cwd별 그룹 구성
+  const groups = [];
+  let lastCwd = null;
+  for (let i = 0; i < allSessions.length; i++) {
+    const cwd = getCwdFolder(allSessions[i]);
+    if (cwd !== lastCwd) {
+      groups.push({ cwd, sessions: [] });
+      lastCwd = cwd;
     }
+    groups[groups.length - 1].sessions.push(i);
   }
 
-  if (end < allSessions.length) {
-    parts.push(` {gray-fg}${allSessions.length - end} more \u25B6{/gray-fg}`);
+  const lines = [];
+  for (const group of groups) {
+    const parts = group.sessions.map(i => {
+      const s = allSessions[i];
+      const name = sessionDisplayName(s);
+      const sid = (s.sessionId || '').substring(0, 4);
+      const age = s.startedAt ? formatDuration(Date.now() - new Date(s.startedAt).getTime()) : '';
+
+      if (i === currentIdx) {
+        return `{white-bg}{black-fg} ${sid} ${age} {/black-fg}{/white-bg}`;
+      }
+      const customName = getName(s.sessionId);
+      const label = customName ? `"${customName}"` : sid;
+      return `{gray-fg}${label}{/gray-fg}`;
+    });
+
+    const cwdLabel = `{cyan-fg}${group.cwd}{/cyan-fg}`;
+    lines.push(`  ${cwdLabel}  ${parts.join('  ')}`);
   }
 
-  return parts.join('  ') + '  {gray-fg}[\u2191\u2193 n]{/gray-fg}';
+  return lines;
 }
 
 function updateHeader(header, session, sessionData, contextPct, ageMs, idleMs, allSessions, currentIdx) {
@@ -83,12 +89,14 @@ function updateHeader(header, session, sessionData, contextPct, ageMs, idleMs, a
   const bar = contextBar(contextPct, 20);
   const ctxWarn = contextPct >= 80 ? ` {${config.COLORS.warn}-fg}${I.warn} compaction soon{/${config.COLORS.warn}-fg}` : '';
 
-  const sessionNav = formatSessionNav(allSessions, currentIdx);
+  const navLines = formatSessionNav(allSessions, currentIdx);
 
   const lines = [];
 
-  if (sessionNav) {
-    lines.push(sessionNav);
+  if (navLines.length > 0) {
+    lines.push(`{gray-fg}Sessions (${allSessions.length})  [\u2191\u2193 switch  n:rename]{/gray-fg}`);
+    lines.push(...navLines);
+    lines.push('');
   }
 
   lines.push(`{cyan-fg}${I.folder} ${cwd}{/cyan-fg}`);

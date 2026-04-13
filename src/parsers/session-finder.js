@@ -27,7 +27,13 @@ function findActiveSessions() {
       }
     }
 
-    sessions.sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0));
+    // cwd 기준 그루핑 → 그룹 내 최신순
+    sessions.sort((a, b) => {
+      const cwdA = (a.cwd || '').toLowerCase();
+      const cwdB = (b.cwd || '').toLowerCase();
+      if (cwdA !== cwdB) return cwdA < cwdB ? -1 : 1;
+      return (b.startedAt || 0) - (a.startedAt || 0);
+    });
     return sessions;
   } catch {
     return [];
