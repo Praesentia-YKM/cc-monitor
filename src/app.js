@@ -177,7 +177,7 @@ function createApp(options = {}) {
       const skills = parseSkillHistory(session.sessionId);
       updateSkillPanel(skillPanel, skills);
 
-      const cost = parseCost(session.sessionId);
+      const cost = parseCost();
       updateCostPanel(costPanel, cost);
     } else {
       // Flow tab
