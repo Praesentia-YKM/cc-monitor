@@ -30,9 +30,22 @@ function parseSubagents(projectDir, sessionId) {
         if (entries.length > 0) {
           startTime = entries[0].timestamp;
           const lastEntry = entries[entries.length - 1];
+
+          // 완료 판별: end-of-session 또는 마지막이 text-only assistant + 30초 이상 무응답
           if (lastEntry.type === 'end-of-session') {
             isRunning = false;
             endTime = lastEntry.timestamp;
+          } else if (lastEntry.type === 'assistant' && lastEntry.timestamp) {
+            const lastContent = lastEntry.message && Array.isArray(lastEntry.message.content)
+              ? lastEntry.message.content : [];
+            const hasToolUse = lastContent.some(b => b.type === 'tool_use');
+            const lastTime = parseTimestamp(lastEntry.timestamp).getTime();
+            const idleMs = Date.now() - lastTime;
+
+            if (!hasToolUse && idleMs > 30 * 1000) {
+              isRunning = false;
+              endTime = lastEntry.timestamp;
+            }
           }
         }
 
