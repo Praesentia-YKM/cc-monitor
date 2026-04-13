@@ -3,6 +3,7 @@ const { createSection } = require('./layout');
 const { formatDuration, formatTokenCount, formatTime } = require('../utils/time-format');
 const { contextColor, contextBar } = require('../utils/colors');
 const { getName } = require('../utils/session-names');
+const { shortModelName } = require('../utils/format-model');
 const config = require('../config');
 const I = config.ICONS;
 
@@ -80,7 +81,7 @@ function formatSessionNav(allSessions, currentIdx) {
 
 function updateHeader(header, session, sessionData, contextPct, ageMs, idleMs, allSessions, currentIdx) {
   const model = sessionData.model || 'unknown';
-  const shortModel = model.replace('claude-', '');
+  const shortModel = shortModelName(model) || model;
   const cwd = session.cwd || '';
   const sid = (session.sessionId || '').substring(0, 8);
   const customName = getName(session.sessionId);

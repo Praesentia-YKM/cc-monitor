@@ -1,7 +1,9 @@
 const fs = require('fs');
+const logger = require('./logger');
 
-const MAX_ACCUMULATED = 5000; // 메모리 누수 방지 상한
+const MAX_ACCUMULATED = 5000;
 const lineCache = new Map();
+const offsetCache = new Map();
 
 function readJsonlFile(filePath, fromLine = 0) {
   try {
@@ -16,23 +18,57 @@ function readJsonlFile(filePath, fromLine = 0) {
       }
     }
     return { entries, totalLines: lines.length };
-  } catch {
+  } catch (e) {
+    logger.log('warn', `readJsonlFile failed: ${filePath}`, e.message);
     return { entries: [], totalLines: 0 };
   }
 }
 
 function readJsonlIncremental(filePath) {
   const cached = lineCache.get(filePath) || { lastLine: 0, accumulated: [] };
-  const { entries, totalLines } = readJsonlFile(filePath, cached.lastLine);
+  const byteOffset = offsetCache.get(filePath) || 0;
 
-  cached.accumulated = cached.accumulated.concat(entries);
+  let newEntries = [];
 
-  // 상한 초과 시 앞쪽 버림 (최근 데이터 유지)
+  try {
+    const stat = fs.statSync(filePath);
+    if (stat.size <= byteOffset) {
+      // 파일 크기 변경 없음 → 새 데이터 없음
+      return cached.accumulated;
+    }
+
+    // 바이트 오프셋부터 신규 데이터만 읽기
+    const fd = fs.openSync(filePath, 'r');
+    const buf = Buffer.alloc(stat.size - byteOffset);
+    fs.readSync(fd, buf, 0, buf.length, byteOffset);
+    fs.closeSync(fd);
+
+    const chunk = buf.toString('utf-8');
+    const lines = chunk.split('\n');
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      try {
+        newEntries.push(JSON.parse(trimmed));
+      } catch {
+        // skip malformed lines
+      }
+    }
+
+    offsetCache.set(filePath, stat.size);
+  } catch (e) {
+    logger.log('warn', `readJsonlIncremental failed: ${filePath}`, e.message);
+    return cached.accumulated;
+  }
+
+  cached.accumulated = cached.accumulated.concat(newEntries);
+
   if (cached.accumulated.length > MAX_ACCUMULATED) {
     cached.accumulated = cached.accumulated.slice(-MAX_ACCUMULATED);
   }
 
-  cached.lastLine = totalLines;
+  cached.lastLine = cached.lastLine + newEntries.length;
   lineCache.set(filePath, cached);
 
   return cached.accumulated;
@@ -41,15 +77,18 @@ function readJsonlIncremental(filePath) {
 function resetCache(filePath) {
   if (filePath) {
     lineCache.delete(filePath);
+    offsetCache.delete(filePath);
   } else {
     lineCache.clear();
+    offsetCache.clear();
   }
 }
 
 function readJsonFile(filePath) {
   try {
     return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-  } catch {
+  } catch (e) {
+    logger.log('warn', `readJsonFile failed: ${filePath}`, e.message);
     return null;
   }
 }

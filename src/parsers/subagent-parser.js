@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { readJsonFile, readJsonlFile } = require('../utils/jsonl-reader');
 const { parseTimestamp } = require('../utils/time-format');
+const { countTools } = require('../utils/tool-counter');
 
 function parseSubagents(projectDir, sessionId) {
   const subagentsDir = path.join(projectDir, sessionId, 'subagents');
@@ -61,14 +62,7 @@ function parseSubagents(projectDir, sessionId) {
                 + (usage.cache_read_input_tokens || 0);
               tokensOut += usage.output_tokens || 0;
             }
-            const content = entry.message.content;
-            if (Array.isArray(content)) {
-              for (const block of content) {
-                if (block.type === 'tool_use' && block.name) {
-                  tools[block.name] = (tools[block.name] || 0) + 1;
-                }
-              }
-            }
+            countTools(tools, entry.message.content);
           }
         }
       }

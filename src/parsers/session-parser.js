@@ -1,5 +1,6 @@
 const { readJsonlIncremental } = require('../utils/jsonl-reader');
 const { parseTimestamp } = require('../utils/time-format');
+const { countTools } = require('../utils/tool-counter');
 const config = require('../config');
 
 function parseSession(jsonlPath) {
@@ -46,14 +47,7 @@ function parseSession(jsonlPath) {
           + (usage.cache_read_input_tokens || 0);
       }
 
-      const content = entry.message.content;
-      if (Array.isArray(content)) {
-        for (const block of content) {
-          if (block.type === 'tool_use' && block.name) {
-            result.tools[block.name] = (result.tools[block.name] || 0) + 1;
-          }
-        }
-      }
+      countTools(result.tools, entry.message.content);
     }
   }
 

@@ -1,18 +1,7 @@
 const path = require('path');
 const { readJsonlIncremental } = require('../utils/jsonl-reader');
 const { parseTimestamp, formatTime } = require('../utils/time-format');
-
-const EVENT_TYPES = {
-  HOOK_SUCCESS: 'hook',
-  HOOK_CANCELLED: 'hook_cancel',
-  RULE_LOADED: 'rule',
-  MEMORY_LOADED: 'memory',
-  SKILL_LISTED: 'skill_list',
-  SKILL_CALLED: 'skill_call',
-  TOOL_USE: 'tool',
-  USER_MSG: 'user',
-  ASSISTANT_MSG: 'assistant',
-};
+const { EVENT_TYPES } = require('../constants/event-types');
 
 function parseFlowEvents(jsonlPath) {
   const entries = readJsonlIncremental(jsonlPath);
@@ -169,4 +158,4 @@ function truncate(str, maxLen) {
   return oneLine.length > maxLen ? oneLine.substring(0, maxLen) + '\u2026' : oneLine;
 }
 
-module.exports = { parseFlowEvents, buildFlowSummary, EVENT_TYPES };
+module.exports = { parseFlowEvents, buildFlowSummary };

@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const config = require('../config');
 const { readJsonFile } = require('../utils/jsonl-reader');
+const logger = require('../utils/logger');
 
 function isProcessAlive(pid) {
   try {
@@ -34,8 +35,10 @@ function findActiveSessions() {
       if (cwdA !== cwdB) return cwdA < cwdB ? -1 : 1;
       return (b.startedAt || 0) - (a.startedAt || 0);
     });
+    logger.log('debug', `Found ${sessions.length} active sessions`);
     return sessions;
-  } catch {
+  } catch (e) {
+    logger.log('warn', 'findActiveSessions failed', e.message);
     return [];
   }
 }

@@ -17,12 +17,17 @@ const { parseSession, calcContextPercent, calcIdleTime, calcAge } = require('./p
 const { parseSubagents } = require('./parsers/subagent-parser');
 const { parseSkillHistory } = require('./parsers/history-parser');
 const { parseCost } = require('./parsers/cost-parser');
-const { parseFlowEvents, buildFlowSummary, EVENT_TYPES } = require('./parsers/flow-parser');
+const { parseFlowEvents, buildFlowSummary } = require('./parsers/flow-parser');
+const { EVENT_TYPES } = require('./constants/event-types');
 const { resetCache } = require('./utils/jsonl-reader');
 const { createHelpOverlay } = require('./ui/help-overlay');
 const { saveName, getName } = require('./utils/session-names');
+const logger = require('./utils/logger');
 
 function createApp(options = {}) {
+  logger.init(options.debug);
+  logger.log('info', 'App starting', { debug: !!options.debug });
+
   const screen = createScreen();
 
   // === Tab 1: Overview ===
@@ -207,20 +212,23 @@ function createApp(options = {}) {
   }
 
   // Key bindings
-  screen.key(['q'], () => {
-    if (renameActive) return; // textbox가 처리
-    if (helpVisible) { toggleHelp(); return; }
+  function quit() {
     clearInterval(pollTimer);
+    logger.close();
     screen.destroy();
     process.exit(0);
+  }
+
+  screen.key(['q'], () => {
+    if (renameActive) return;
+    if (helpVisible) { toggleHelp(); return; }
+    quit();
   });
 
   screen.key(['escape'], () => {
-    if (renameActive) return; // textbox가 cancel 이벤트로 처리
+    if (renameActive) return;
     if (helpVisible) { toggleHelp(); return; }
-    clearInterval(pollTimer);
-    screen.destroy();
-    process.exit(0);
+    quit();
   });
 
   screen.key(['?'], () => { toggleHelp(); });

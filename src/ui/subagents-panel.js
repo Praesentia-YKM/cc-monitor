@@ -1,5 +1,6 @@
 const { createSection } = require('./layout');
 const { formatDuration, formatTokenCount } = require('../utils/time-format');
+const { formatModelTag } = require('../utils/format-model');
 const config = require('../config');
 const I = config.ICONS;
 
@@ -17,14 +18,6 @@ function createSubagentsPanel(screen, top) {
   return box;
 }
 
-function formatModel(model) {
-  if (!model) return '';
-  const short = model.replace('claude-', '').replace(/-\d{8}$/, '');
-  if (short.includes('haiku')) return `{blue-fg}haiku{/blue-fg}`;
-  if (short.includes('sonnet')) return `{yellow-fg}sonnet{/yellow-fg}`;
-  if (short.includes('opus')) return `{magenta-fg}opus{/magenta-fg}`;
-  return `{gray-fg}${short}{/gray-fg}`;
-}
 
 function bottleneckIndicator(agent) {
   const totalTools = Object.values(agent.tools).reduce((s, c) => s + c, 0);
@@ -69,7 +62,7 @@ function updateSubagentsPanel(box, agents) {
       : `{gray-fg}${I.agentDone}{/gray-fg}`;
     const type = a.type.length > 14 ? a.type.substring(0, 14) : a.type;
     const dur = formatDuration(a.elapsedMs).padStart(7);
-    const modelStr = formatModel(a.model);
+    const modelStr = formatModelTag(a.model);
 
     // 도구 사용 요약 (상위 3개)
     const toolEntries = Object.entries(a.tools).sort((x, y) => y[1] - x[1]);

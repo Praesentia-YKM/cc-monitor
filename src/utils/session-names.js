@@ -13,13 +13,21 @@ function loadNames() {
 }
 
 function saveName(sessionId, name) {
-  const names = loadNames();
-  if (name && name.trim()) {
-    names[sessionId] = name.trim();
-  } else {
-    delete names[sessionId];
+  try {
+    const names = loadNames();
+    if (name && name.trim()) {
+      names[sessionId] = name.trim();
+    } else {
+      delete names[sessionId];
+    }
+    const dir = path.dirname(NAMES_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(NAMES_FILE, JSON.stringify(names, null, 2), 'utf-8');
+  } catch {
+    // 쓰기 실패 시 무시 (TUI 안정성 우선)
   }
-  fs.writeFileSync(NAMES_FILE, JSON.stringify(names, null, 2), 'utf-8');
 }
 
 function getName(sessionId) {

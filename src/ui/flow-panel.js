@@ -1,6 +1,6 @@
 const { createSection } = require('./layout');
 const config = require('../config');
-const { EVENT_TYPES } = require('../parsers/flow-parser');
+const { EVENT_TYPES } = require('../constants/event-types');
 const I = config.ICONS;
 
 const EVENT_STYLE = {
