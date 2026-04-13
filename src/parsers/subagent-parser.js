@@ -20,6 +20,10 @@ function parseSubagents(projectDir, sessionId) {
       let isRunning = true;
       let startTime = null;
       let endTime = null;
+      let model = null;
+      let tokensIn = 0;
+      let tokensOut = 0;
+      const tools = {};
 
       if (fs.existsSync(jsonlPath)) {
         const { entries } = readJsonlFile(jsonlPath);
@@ -29,6 +33,29 @@ function parseSubagents(projectDir, sessionId) {
           if (lastEntry.type === 'end-of-session') {
             isRunning = false;
             endTime = lastEntry.timestamp;
+          }
+        }
+
+        for (const entry of entries) {
+          if (entry.type === 'assistant' && entry.message) {
+            if (entry.message.model && !model) {
+              model = entry.message.model;
+            }
+            const usage = entry.message.usage;
+            if (usage) {
+              tokensIn += (usage.input_tokens || 0)
+                + (usage.cache_creation_input_tokens || 0)
+                + (usage.cache_read_input_tokens || 0);
+              tokensOut += usage.output_tokens || 0;
+            }
+            const content = entry.message.content;
+            if (Array.isArray(content)) {
+              for (const block of content) {
+                if (block.type === 'tool_use' && block.name) {
+                  tools[block.name] = (tools[block.name] || 0) + 1;
+                }
+              }
+            }
           }
         }
       }
@@ -42,8 +69,12 @@ function parseSubagents(projectDir, sessionId) {
         id: agentId,
         type: meta.agentType || 'unknown',
         description: meta.description || '',
+        model,
         isRunning,
         elapsedMs: elapsed,
+        tokensIn,
+        tokensOut,
+        tools,
       });
     }
 
