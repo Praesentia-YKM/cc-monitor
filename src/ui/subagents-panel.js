@@ -85,8 +85,8 @@ function updateSubagentsPanel(box, agents) {
       `  ${icon} {bold}${type}{/bold}  ${modelStr}  {cyan-fg}${dur}{/cyan-fg}`
       + `  ${tokenStr}  {gray-fg}${toolStr}{/gray-fg}`
       + (warn ? `  ${warn}` : '')
+      + `  {gray-fg}${desc}{/gray-fg}`
     );
-    lines.push(`    {gray-fg}${desc}{/gray-fg}`);
   });
 
   box.setContent(lines.join('\n'));
