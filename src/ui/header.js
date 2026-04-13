@@ -38,18 +38,38 @@ function sessionDisplayName(session) {
 function formatSessionNav(allSessions, currentIdx) {
   if (!allSessions || allSessions.length <= 1) return '';
 
-  const parts = allSessions.map((s, i) => {
+  // 현재 세션 주변 최대 5개만 표시 (윈도우 슬라이딩)
+  const maxVisible = 5;
+  let start = Math.max(0, currentIdx - Math.floor(maxVisible / 2));
+  let end = Math.min(allSessions.length, start + maxVisible);
+  if (end - start < maxVisible) {
+    start = Math.max(0, end - maxVisible);
+  }
+
+  const parts = [];
+
+  if (start > 0) {
+    parts.push(`{gray-fg}\u25C0 ${start} more{/gray-fg} `);
+  }
+
+  for (let i = start; i < end; i++) {
+    const s = allSessions[i];
     const name = sessionDisplayName(s);
-    const sid = (s.sessionId || '').substring(0, 6);
+    const sid = (s.sessionId || '').substring(0, 4);
     const age = s.startedAt ? formatDuration(Date.now() - new Date(s.startedAt).getTime()) : '';
 
     if (i === currentIdx) {
-      return `{white-bg}{black-fg} ${i + 1}:${name} (${sid} ${age}) {/black-fg}{/white-bg}`;
+      parts.push(`{white-bg}{black-fg} ${i + 1}/${allSessions.length} ${name} ${sid} ${age} {/black-fg}{/white-bg}`);
+    } else {
+      parts.push(`{gray-fg}${i + 1}:${name}{/gray-fg}`);
     }
-    return `{gray-fg} ${i + 1}:${name} (${sid}) {/gray-fg}`;
-  });
+  }
 
-  return parts.join('') + '  {gray-fg}[\u2191\u2193 switch  n:rename]{/gray-fg}';
+  if (end < allSessions.length) {
+    parts.push(` {gray-fg}${allSessions.length - end} more \u25B6{/gray-fg}`);
+  }
+
+  return parts.join('  ') + '  {gray-fg}[\u2191\u2193 n]{/gray-fg}';
 }
 
 function updateHeader(header, session, sessionData, contextPct, ageMs, idleMs, allSessions, currentIdx) {
