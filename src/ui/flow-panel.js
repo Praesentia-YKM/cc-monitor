@@ -66,19 +66,56 @@ function createFlowTimelinePanel(screen) {
   return box;
 }
 
+function groupConsecutiveHooks(events) {
+  const result = [];
+  let i = 0;
+
+  while (i < events.length) {
+    const ev = events[i];
+
+    if (ev.type === EVENT_TYPES.HOOK_CANCELLED) {
+      const group = { tools: {}, count: 0, firstTime: ev.timeStr, lastTime: ev.timeStr };
+      while (i < events.length && events[i].type === EVENT_TYPES.HOOK_CANCELLED) {
+        const label = events[i].label || 'unknown';
+        const toolName = label.includes(':') ? label.split(':').pop() : label;
+        group.tools[toolName] = (group.tools[toolName] || 0) + 1;
+        group.count++;
+        group.lastTime = events[i].timeStr;
+        i++;
+      }
+      result.push({ _grouped: true, ...group });
+    } else {
+      result.push(ev);
+      i++;
+    }
+  }
+  return result;
+}
+
 function updateFlowTimelinePanel(box, events, scrollToBottom) {
   if (!events || events.length === 0) {
     box.setContent('{gray-fg}  (no events yet){/gray-fg}');
     return;
   }
 
+  const grouped = groupConsecutiveHooks(events);
   const lines = [];
   let lastMsgIdx = null;
 
-  for (const event of events) {
+  for (const item of grouped) {
+    if (item._grouped) {
+      const toolSummary = Object.entries(item.tools)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, cnt]) => `${name}:${cnt}`)
+        .join(' ');
+      const time = item.firstTime ? `{gray-fg}${item.firstTime}{/gray-fg}` : '        ';
+      lines.push(`  ${time}  {gray-fg}\u2717 [HOOK ] PostToolUse x${item.count} (${toolSummary}){/gray-fg}`);
+      continue;
+    }
+
+    const event = item;
     const style = EVENT_STYLE[event.type] || { icon: '?', color: 'white', tag: '???' };
 
-    // 사용자 메시지마다 구분선
     if (event.type === EVENT_TYPES.USER_MSG && lastMsgIdx !== null) {
       lines.push(`{gray-fg}  ${'─'.repeat(70)}{/gray-fg}`);
     }

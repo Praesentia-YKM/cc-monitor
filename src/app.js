@@ -177,7 +177,10 @@ function createApp(options = {}) {
       updateToolsPanel(toolsPanel, sessionData.tools);
 
       const agents = parseSubagents(jsonlInfo.projectDir, session.sessionId);
-      updateSubagentsPanel(subagentsPanel, agents);
+      const subLines = updateSubagentsPanel(subagentsPanel, agents) || 1;
+      const subHeight = Math.max(4, Math.min(subLines + 2, 16));
+      subagentsPanel.height = subHeight;
+      skillPanel.top = 12 + subHeight;
 
       const skills = parseSkillHistory(session.sessionId);
       updateSkillPanel(skillPanel, skills);

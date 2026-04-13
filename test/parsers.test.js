@@ -180,6 +180,59 @@ test('parseSkillHistory returns array', () => {
   assert.strictEqual(skills.length, 0);
 });
 
+// subagent-parser 진단 테스트
+const { extractDiagnostics, detectRepeatPattern } = require('../src/parsers/subagent-parser');
+
+console.log('\n=== parsers/subagent-diagnostics ===');
+
+test('extractDiagnostics detects errors from tool_result', () => {
+  const entries = [
+    { type: 'user', message: { content: [
+      { type: 'tool_result', is_error: true, content: 'File exceeds 256KB limit' },
+    ]}},
+    { type: 'assistant', message: { content: [
+      { type: 'text', text: 'Searching for files...' },
+      { type: 'tool_use', name: 'Grep', input: {} },
+    ]}},
+  ];
+  const diag = extractDiagnostics(entries);
+  assert.strictEqual(diag.errors.length, 1);
+  assert.ok(diag.errors[0].includes('256KB'));
+  assert.strictEqual(diag.lastActivity, 'Searching for files...');
+});
+
+test('extractDiagnostics detects denied tools', () => {
+  const entries = [
+    { type: 'user', message: { content: [
+      { type: 'tool_result', is_error: true, content: 'Permission denied by user' },
+    ]}},
+  ];
+  const diag = extractDiagnostics(entries);
+  assert.strictEqual(diag.deniedCount, 1);
+});
+
+test('detectRepeatPattern finds tool loops', () => {
+  const seq = ['Read', 'Grep', 'Grep', 'Grep', 'Grep', 'Grep', 'Grep', 'Grep'];
+  const result = detectRepeatPattern(seq);
+  assert.ok(result);
+  assert.strictEqual(result.tool, 'Grep');
+  assert.strictEqual(result.count, 7);
+});
+
+test('detectRepeatPattern returns null for normal sequences', () => {
+  const seq = ['Read', 'Grep', 'Glob', 'Read', 'Edit'];
+  const result = detectRepeatPattern(seq);
+  assert.strictEqual(result, null);
+});
+
+test('extractDiagnostics handles empty entries', () => {
+  const diag = extractDiagnostics([]);
+  assert.strictEqual(diag.errors.length, 0);
+  assert.strictEqual(diag.deniedCount, 0);
+  assert.strictEqual(diag.lastActivity, '');
+  assert.strictEqual(diag.repeatPattern, null);
+});
+
 // session-names 테스트
 const { saveName, getName, loadNames } = require('../src/utils/session-names');
 

@@ -3,6 +3,91 @@ const path = require('path');
 const { readJsonFile, readJsonlFile } = require('../utils/jsonl-reader');
 const { parseTimestamp } = require('../utils/time-format');
 const { countTools } = require('../utils/tool-counter');
+const logger = require('../utils/logger');
+
+const NOISE_PATTERNS = [
+  /^exit code \d+$/i,
+  /^cancelled/i,
+  /^<tool_use_error>/,
+  /parallel tool call/i,
+  /command (exited|failed) with/i,
+  /^UP-TO-DATE$/,
+];
+
+function isNoiseError(text) {
+  return NOISE_PATTERNS.some(re => re.test(text.trim()));
+}
+
+function extractErrorText(block) {
+  if (typeof block.content === 'string') return block.content;
+  if (Array.isArray(block.content) && block.content[0] && block.content[0].text) return block.content[0].text;
+  return '';
+}
+
+function extractDiagnostics(entries) {
+  const errors = [];
+  let deniedCount = 0;
+  let lastActivity = '';
+  const toolSequence = [];
+
+  for (const entry of entries) {
+    if (entry.type === 'assistant' && entry.message) {
+      const content = entry.message.content;
+      if (!Array.isArray(content)) continue;
+
+      for (const block of content) {
+        if (block.type === 'tool_use' && block.name) {
+          toolSequence.push(block.name);
+        }
+        if (block.type === 'text' && block.text) {
+          lastActivity = block.text;
+        }
+        if (block.type === 'tool_result' && block.is_error) {
+          const errText = extractErrorText(block);
+          if (errText && !isNoiseError(errText)) {
+            errors.push(errText);
+          }
+        }
+      }
+    }
+
+    if (entry.type === 'user' && entry.message) {
+      const content = entry.message.content;
+      if (!Array.isArray(content)) continue;
+      for (const block of content) {
+        if (block.type === 'tool_result' && block.is_error) {
+          const errText = extractErrorText(block);
+          if (/denied|permission|not allowed/i.test(errText)) {
+            deniedCount++;
+          } else if (errText && !isNoiseError(errText)) {
+            errors.push(errText);
+          }
+        }
+      }
+    }
+  }
+
+  const repeatPattern = detectRepeatPattern(toolSequence);
+
+  return { errors, deniedCount, lastActivity, repeatPattern };
+}
+
+function detectRepeatPattern(sequence) {
+  if (sequence.length < 6) return null;
+
+  const tail = sequence.slice(-20);
+  const counts = {};
+  for (const name of tail) {
+    counts[name] = (counts[name] || 0) + 1;
+  }
+
+  for (const [name, count] of Object.entries(counts)) {
+    if (count >= 6 && count / tail.length > 0.5) {
+      return { tool: name, count };
+    }
+  }
+  return null;
+}
 
 function parseSubagents(projectDir, sessionId) {
   const subagentsDir = path.join(projectDir, sessionId, 'subagents');
@@ -25,6 +110,7 @@ function parseSubagents(projectDir, sessionId) {
       let tokensIn = 0;
       let tokensOut = 0;
       const tools = {};
+      let diagnostics = { errors: [], deniedCount: 0, lastActivity: '', repeatPattern: null };
 
       if (fs.existsSync(jsonlPath)) {
         const { entries } = readJsonlFile(jsonlPath);
@@ -32,7 +118,6 @@ function parseSubagents(projectDir, sessionId) {
           startTime = entries[0].timestamp;
           const lastEntry = entries[entries.length - 1];
 
-          // 완료 판별: end-of-session 또는 마지막이 text-only assistant + 30초 이상 무응답
           if (lastEntry.type === 'end-of-session') {
             isRunning = false;
             endTime = lastEntry.timestamp;
@@ -65,6 +150,15 @@ function parseSubagents(projectDir, sessionId) {
             countTools(tools, entry.message.content);
           }
         }
+
+        diagnostics = extractDiagnostics(entries);
+        if (diagnostics.errors.length > 0 || diagnostics.repeatPattern) {
+          logger.log('debug', `Agent ${agentId} diagnostics`, {
+            errors: diagnostics.errors.length,
+            denied: diagnostics.deniedCount,
+            repeat: diagnostics.repeatPattern,
+          });
+        }
       }
 
       const elapsed = startTime
@@ -82,6 +176,7 @@ function parseSubagents(projectDir, sessionId) {
         tokensIn,
         tokensOut,
         tools,
+        diagnostics,
       });
     }
 
@@ -96,4 +191,4 @@ function parseSubagents(projectDir, sessionId) {
   }
 }
 
-module.exports = { parseSubagents };
+module.exports = { parseSubagents, extractDiagnostics, detectRepeatPattern };
