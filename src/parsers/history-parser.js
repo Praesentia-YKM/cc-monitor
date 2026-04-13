@@ -1,0 +1,19 @@
+const { readJsonlFile } = require('../utils/jsonl-reader');
+const { parseTimestamp, formatTime } = require('../utils/time-format');
+const config = require('../config');
+
+function parseSkillHistory(sessionId) {
+  const { entries } = readJsonlFile(config.HISTORY_FILE);
+  const skills = entries
+    .filter(e => e.sessionId === sessionId && e.display)
+    .map(e => ({
+      name: e.display,
+      timestamp: parseTimestamp(e.timestamp),
+      timeStr: formatTime(parseTimestamp(e.timestamp)),
+    }))
+    .sort((a, b) => b.timestamp - a.timestamp);
+
+  return skills.slice(0, 10);
+}
+
+module.exports = { parseSkillHistory };

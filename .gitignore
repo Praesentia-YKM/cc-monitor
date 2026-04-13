@@ -1,0 +1,5 @@
+node_modules/
+session-names.json
+*.log
+.DS_Store
+Thumbs.db

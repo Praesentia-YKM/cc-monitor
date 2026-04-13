@@ -1,0 +1,47 @@
+{
+  "name": "cc-monitor",
+  "version": "1.0.0",
+  "description": "Real-time TUI dashboard for monitoring Claude Code sessions",
+  "main": "src/app.js",
+  "bin": {
+    "cc-monitor": "./bin/cc-monitor.js"
+  },
+  "scripts": {
+    "start": "node bin/cc-monitor.js",
+    "dev": "node bin/cc-monitor.js --debug"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "claude",
+    "claude-code",
+    "monitor",
+    "tui",
+    "dashboard",
+    "session",
+    "terminal",
+    "blessed",
+    "anthropic",
+    "cli"
+  ],
+  "author": "ykm8864",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Praesentia-YKM/cc-monitor.git"
+  },
+  "homepage": "https://github.com/Praesentia-YKM/cc-monitor#readme",
+  "bugs": {
+    "url": "https://github.com/Praesentia-YKM/cc-monitor/issues"
+  },
+  "dependencies": {
+    "blessed": "^0.1.81"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
