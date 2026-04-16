@@ -29,8 +29,9 @@ function updateToolsPanel(box, tools) {
   const readCount = tools['Read'] || 0;
   const searchCount = (tools['Glob'] || 0) + (tools['Grep'] || 0);
 
-  // Line 1: file activity summary bar
-  const maxBar = 15;
+  // Line 1: file activity summary bar (터미널 너비 반응형)
+  const panelWidth = box.width || 80;
+  const maxBar = Math.max(5, Math.floor((panelWidth - 40) / 3));
   const maxVal = Math.max(editCount, readCount, searchCount, 1);
   const fileParts = [];
   if (readCount > 0) {
