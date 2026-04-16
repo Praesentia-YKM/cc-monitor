@@ -7,7 +7,7 @@ Real-time TUI dashboard for monitoring [Claude Code](https://docs.anthropic.com/
 
 ## Tab 1 — Overview
 
-Session status, tool usage, subagents, cost at a glance.
+Session status, tool usage, subagents, recap, cost at a glance.
 
 ```
 ┌─ ◉ Claude Code Monitor ─────────────────────────────────────────────────┐
@@ -25,10 +25,14 @@ Session status, tool usage, subagents, cost at a glance.
 ├─ ★ Recent Activity ──────────────────────────────────────────────────────┤
 │   ★ 14:23  /commit                                                      │
 │     14:20  Add user auth middleware                                      │
-│     14:15  Fix login validation bug                                      │
+├─ ↻ Recap ────────────────────────────────────────────────────────────────┤
+│   #1 14:05  150.2K→45.3K (8s)                                          │
+│     • Add authentication to the API                                     │
+│     • Fix the login validation bug                                      │
+│   Work: implementing JWT token refresh logic                            │
 ├─ ◈ Cost ─────────────────────────────────────────────────────────────────┤
-│   Today $12.45  │  Session $3.21                                        │
-└──────────────────────── [1:Overview] [2:Flow]  ?:help  n:rename  q:quit ─┘
+│   Today $12.45                                                          │
+└──────────────── [1:Overview] [2:Flow] [3:Config]  ?:help  n:rename  q:quit ─┘
 ```
 
 ### What each panel shows
@@ -38,15 +42,16 @@ Session status, tool usage, subagents, cost at a glance.
 | **Header** | Session ID, model, elapsed time, idle time, context window usage bar |
 | **Tools & Files** | Tool call counts with percentages + Read/Write/Search activity bars |
 | **Subagents** | Running and completed subagents with type, duration, description |
-| **Recent Activity** | Latest user inputs and skill invocations (scrollable) |
-| **Cost** | Today's total API cost + current session cost |
+| **Recent Activity** | Latest user inputs and skill invocations |
+| **Recap** | Context compaction history — token changes, user message summary, current work |
+| **Cost** | Today's total API cost |
 
 ### Context bar colors
 
 | Color | Range | Meaning |
 |-------|-------|---------|
 | `███` Green | < 80% | Normal |
-| `███` Yellow | 80–89% | Compaction approaching |
+| `███` Yellow | 80-89% | Compaction approaching |
 | `███` Red | 90%+ | Compaction imminent |
 
 ---
@@ -58,22 +63,23 @@ Tracks when hooks, rules, memory files, and skills are loaded or executed.
 
 ```
 ┌─ ◉ Flow Summary ────────────────────────────────────────────────────────┐
-│   Events 47  │  ✓ Hooks 12 (3 skipped)  │  ☰ Rules 8  │  ★ Memory 5   │
-│   Skills 3   │  User msgs 6                                            │
+│   Evt 47 │ ✓Hook 12 │ ☰Rule 8 │ ★Mem 5 │ Skill 3 │ User 6            │
 ├─ ▸ Flow Timeline ────────────────────────────────────────────────────────┤
 │   09:41:02  ▶ [USER ]  #1 Add authentication to the API                │
 │   09:41:02  ✓ [HOOK ]  SessionStart skill-activation-protocol           │
 │   09:41:02  ☰ [RULE ]  ajax-common-rules.md                            │
-│   09:41:02  ☰ [RULE ]  behavior.md                                     │
 │   09:41:02  ★ [MEM  ]  user_code_style.md                              │
-│   09:41:02  ≡ [SKILL]  brainstorming, debugging, commit ...             │
 │   ──────────────────────────────────────────────────────────────────     │
 │   09:42:15  ▶ [USER ]  #2 Fix the login bug                            │
 │   09:42:15  ✓ [HOOK ]  UserPromptSubmit skill-activation-protocol       │
 │   09:42:15  ✦ [SKILL]  /systematic-debugging                           │
+│                                                                         │
+│   ═══════════════════════════════════════════════════════════════════    │
+│   10:15:32  ↻ [RECAP] Context Compaction  150.2K → 45.3K               │
+│   ═══════════════════════════════════════════════════════════════════    │
 ├─ Filter ─────────────────────────────────────────────────────────────────┤
 │   ● h:Hooks  ● f:Rules  ● m:Memory  ● s:Skills  ● u:User              │
-└──────────────────────── [1:Overview] [2:Flow]  ?:help  n:rename  q:quit ─┘
+└──────────────── [1:Overview] [2:Flow] [3:Config]  ?:help  n:rename  q:quit ─┘
 ```
 
 ### Event icons
@@ -87,6 +93,7 @@ Tracks when hooks, rules, memory files, and skills are loaded or executed.
 | `★` | MEM | Memory file loaded (`memory/*.md`) |
 | `≡` | SKILL | Available skills listed |
 | `✦` | SKILL | Skill invoked (`/brainstorming`, etc.) |
+| `↻` | RECAP | Context compaction event |
 
 ### Filters
 
@@ -99,6 +106,35 @@ Press the key to toggle each event type on/off (Flow tab only):
 | `m` | Memory events |
 | `s` | Skill events |
 | `u` | User messages |
+
+---
+
+## Tab 3 — Config
+
+Displays the current Claude Code configuration tree — CLAUDE.md, rules, hooks, skills, MCP servers, and memory files.
+
+```
+┌─ ◉ Config Summary ──────────────────────────────────────────────────────┐
+│   CLAUDE.md: 2  Rules: 15  Hooks: 3  Skills: 42  MCP: 5  Memory: 8    │
+├─ ▸ Config Tree ──────────────────────────────────────────────────────────┤
+│   📄 CLAUDE.md                                                          │
+│     project  C:\project\CLAUDE.md (2.1K)                                │
+│     user     C:\Users\User\.claude\CLAUDE.md (1.5K)                     │
+│   📏 Rules                                                              │
+│     project  ajax-common-rules.md                                       │
+│     project  behavior.md                                                │
+│     user     dhtmlx-grid-rules.md                                       │
+│   🔗 Hooks                                                              │
+│     SessionStart  skill-activation-protocol                             │
+│     UserPromptSubmit  skill-activation-protocol                         │
+│   ⚡ Skills                                                              │
+│     brainstorming, debugging, commit, ...                               │
+│   🔌 MCP Servers                                                        │
+│     playwright, notion, mariadb, ...                                    │
+│   🧠 Memory                                                             │
+│     user_code_style.md, feedback_slip_amount.md, ...                    │
+└──────────────── [1:Overview] [2:Flow] [3:Config]  ?:help  n:rename  q:quit ─┘
+```
 
 ---
 
@@ -121,10 +157,23 @@ npm link     # registers 'cc-monitor' command globally
 cc-monitor
 ```
 
+## Update
+
+```bash
+# npm global install
+npm install -g github:Praesentia-YKM/cc-monitor
+
+# from source
+cd cc-monitor
+git pull
+npm install
+```
+
 ## Usage
 
 ```bash
-cc-monitor
+cc-monitor            # normal mode
+cc-monitor --debug    # debug logging to debug.log
 ```
 
 Start while a Claude Code session is running.
@@ -136,15 +185,18 @@ The monitor auto-detects active sessions and refreshes every 2 seconds.
 |-----|--------|
 | `1` | Overview tab |
 | `2` | Flow tab |
+| `3` | Config tab |
 | `?` | Help overlay (scrollable) |
 | `n` | Rename current session |
 | `r` | Manual refresh (reset cache) |
 | `q` / `ESC` | Quit |
-| `Up/Down` | Switch sessions (Overview) / Scroll (Flow, Help) |
+| `Up/Down` | Switch sessions (Overview) / Scroll (Flow, Config, Help) |
 
 ### Multi-Session Support
 
-When multiple Claude Code sessions are running, use `Up/Down` arrows to switch between them. Press `n` to give each session a custom name for easy identification. Names persist across monitor restarts.
+When multiple Claude Code sessions are running, use `Up/Down` arrows on the Overview tab to switch between them. The status bar shows `Session 1/3 [↑↓]`.
+
+Press `n` to give each session a custom name for easy identification. Names persist across monitor restarts.
 
 ## How It Works
 
@@ -156,6 +208,10 @@ cc-monitor reads Claude Code's local session data (read-only):
 | `~/.claude/sessions/` | Active session metadata — PID, cwd, model |
 | `~/.claude/history.jsonl` | User input and skill invocation history |
 | `~/.claude/powerline/usage/today.json` | Daily API cost data |
+| `~/.claude/settings.json` | Hooks, permissions, env vars |
+| `~/.claude/CLAUDE.md` | User-level instructions |
+| `.claude/rules/` | Project rules |
+| `CLAUDE.md` | Project instructions |
 
 cc-monitor **never modifies** any Claude Code files.
 
