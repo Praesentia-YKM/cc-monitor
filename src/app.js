@@ -233,7 +233,7 @@ function createApp(options = {}) {
 
       const conversations = parseConversation(jsonlInfo.jsonlPath);
       const convLines = updateSkillPanel(skillPanel, conversations) || 1;
-      const skillHeight = Math.max(3, Math.min(convLines + 2, 14));
+      const skillHeight = Math.max(3, Math.min(convLines + 2, 22));
       skillPanel.height = skillHeight;
 
       const recaps = parseRecaps(jsonlInfo.jsonlPath);

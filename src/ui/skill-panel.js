@@ -29,16 +29,17 @@ function updateSkillPanel(box, conversations) {
   }
 
   const lines = [];
-  const recent = conversations.slice(-5).reverse();
+  const maxWidth = (box.width || 80) - 8;
+  const recent = conversations.slice(-10).reverse();
 
   recent.forEach((c, i) => {
     const time = `{cyan-fg}${c.timeStr}{/cyan-fg}`;
     const userIcon = i === 0 ? `{green-fg}${I.tool}{/green-fg}` : `{gray-fg}${I.tool}{/gray-fg}`;
     const userText = i === 0
-      ? `{bold}${truncate(c.userText, 55)}{/bold}`
-      : `${truncate(c.userText, 55)}`;
+      ? `{bold}${truncate(c.userText, maxWidth - 12)}{/bold}`
+      : `${truncate(c.userText, maxWidth - 12)}`;
     lines.push(`  ${userIcon} ${time} ${userText}`);
-    lines.push(`    {gray-fg}\u25C0 ${truncate(c.aiText, 58)}{/gray-fg}`);
+    lines.push(`    {gray-fg}\u25C0 ${truncate(c.aiText, maxWidth - 6)}{/gray-fg}`);
   });
 
   box.setContent(lines.join('\n'));
