@@ -31,15 +31,14 @@ function updateConfigSummaryPanel(box, configData) {
   const pluginsCount = configData.plugins ? configData.plugins.length : 0;
   const model = configData.model || 'unknown';
 
-  const sep = ` {gray-fg}${I.separator}{/gray-fg} `;
-  const line1 = [
-    `{yellow-fg}${ICONS.rules}Rule{/yellow-fg} {bold}${rulesCount}{/bold}`,
-    `{cyan-fg}${ICONS.hooks}Hook{/cyan-fg} {bold}${hooksCount}{/bold}`,
-    `{green-fg}${ICONS.skills}Skill{/green-fg} {bold}${skills.length}{/bold} {gray-fg}(${customSkills}+${pluginSkills}){/gray-fg}`,
-    `{magenta-fg}${ICONS.plugins}Plugin{/magenta-fg} {bold}${pluginsCount}{/bold}`,
-  ].join(sep);
+  const sep = `  {gray-fg}${I.separator}{/gray-fg}  `;
 
-  const line2 = `{gray-fg}Model{/gray-fg} {bold}${model}{/bold}`;
+  const line1 = `{yellow-fg}${ICONS.rules} Rules{/yellow-fg} {bold}${rulesCount}{/bold}`
+    + sep + `{cyan-fg}${ICONS.hooks} Hooks{/cyan-fg} {bold}${hooksCount}{/bold}`
+    + sep + `{green-fg}${ICONS.skills} Skills{/green-fg} {bold}${skills.length}{/bold} {gray-fg}(${customSkills}+${pluginSkills}){/gray-fg}`;
+
+  const line2 = `{magenta-fg}${ICONS.plugins} Plugins{/magenta-fg} {bold}${pluginsCount}{/bold}`
+    + sep + `{gray-fg}Model{/gray-fg} {bold}${model}{/bold}`;
 
   box.setContent(`${line1}\n${line2}`);
 }

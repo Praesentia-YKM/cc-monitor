@@ -46,15 +46,14 @@ function updateToolsPanel(box, tools) {
     fileParts.push(`\u2026Search {yellow-fg}${'|'.repeat(barLen)}{/yellow-fg} {bold}${searchCount}{/bold}`);
   }
 
-  // Line 2: top tools with counts (max 6 to avoid overflow)
-  const toolParts = sorted.slice(0, 6).map(([name, count]) => {
+  // Line 2+: all tools with counts
+  const toolParts = sorted.map(([name, count]) => {
     const pct = Math.round((count / total) * 100);
     return `${name}:{bold}${count}{/bold}{gray-fg}(${pct}%){/gray-fg}`;
   });
-  const remaining = sorted.length - 6;
 
-  const line1 = `  {gray-fg}Total:{/gray-fg} {bold}${total}{/bold}` + (fileParts.length > 0 ? ` ${I.separator} ${fileParts.join('  ')}` : '');
-  const line2 = `  ${toolParts.join(' ')}` + (remaining > 0 ? ` {gray-fg}+${remaining}{/gray-fg}` : '');
+  const line1 = `  {gray-fg}Total:{/gray-fg} {bold}${total}{/bold} calls` + (fileParts.length > 0 ? `  ${I.separator}  ${fileParts.join('  ')}` : '');
+  const line2 = `  ${toolParts.join('  ')}`;
 
   box.setContent(`${line1}\n${line2}`);
 }

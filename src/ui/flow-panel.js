@@ -30,23 +30,21 @@ function createFlowSummaryPanel(screen) {
 }
 
 function updateFlowSummaryPanel(box, summary) {
-  const items = [
-    `{gray-fg}Evt{/gray-fg} {bold}${summary.totalEvents}{/bold}`,
-    `{green-fg}${I.agentDone}Hook{/green-fg} {bold}${summary.hooksSuccess}{/bold}`,
-    `{yellow-fg}\u2630Rule{/yellow-fg} {bold}${summary.rules}{/bold}`,
-    `{magenta-fg}${I.skill}Mem{/magenta-fg} {bold}${summary.memories}{/bold}`,
-    `{green-fg}Skill{/green-fg} {bold}${summary.skillCalls}{/bold}`,
-    `{cyan-fg}User{/cyan-fg} {bold}${summary.userMsgs}{/bold}`,
-  ];
-  if (summary.hooksCancelled > 0) {
-    items.push(`{gray-fg}Skip ${summary.hooksCancelled}{/gray-fg}`);
-  }
-  if (summary.compactions > 0) {
-    items.push(`{red-fg}\u21BBRecap{/red-fg} {bold}${summary.compactions}{/bold}`);
-  }
+  const sep = `  {gray-fg}${I.separator}{/gray-fg}  `;
 
-  const sep = ` {gray-fg}${I.separator}{/gray-fg} `;
-  box.setContent(items.join(sep));
+  const line1 = `{gray-fg}Events{/gray-fg} {bold}${summary.totalEvents}{/bold}`
+    + sep + `{green-fg}${I.agentDone} Hooks{/green-fg} {bold}${summary.hooksSuccess}{/bold}`
+    + (summary.hooksCancelled > 0 ? ` {gray-fg}(${summary.hooksCancelled} skipped){/gray-fg}` : '')
+    + sep + `{yellow-fg}\u2630 Rules{/yellow-fg} {bold}${summary.rules}{/bold}`
+    + sep + `{magenta-fg}${I.skill} Memory{/magenta-fg} {bold}${summary.memories}{/bold}`;
+
+  const line2 = `{gray-fg}Skills{/gray-fg} {bold}${summary.skillCalls}{/bold}`
+    + sep + `{cyan-fg}User msgs{/cyan-fg} {bold}${summary.userMsgs}{/bold}`
+    + (summary.compactions > 0
+      ? sep + `{red-fg}\u21BB Compactions{/red-fg} {bold}${summary.compactions}{/bold}`
+      : '');
+
+  box.setContent(`${line1}\n${line2}`);
 }
 
 function createFlowTimelinePanel(screen) {

@@ -30,9 +30,9 @@ function updateStatusBar(bar, pollInterval, sessionCount, sessionIdx, currentTab
     ? `  Session ${sessionIdx + 1}/${sessionCount} [\u2191\u2193]`
     : '';
 
-  const filterHint = tab === 2 ? ' {bold}h{/bold}ook {bold}f{/bold}rule {bold}m{/bold}em {bold}s{/bold}kill {bold}u{/bold}ser' : '';
+  const filterHint = tab === 2 ? '  {bold}h{/bold}ook {bold}f{/bold}ilter:rules {bold}m{/bold}em {bold}s{/bold}kill {bold}u{/bold}ser' : '';
 
-  bar.setContent(`${tab1}${tab2}${tab3} {bold}q{/bold}:quit {bold}r{/bold}:ref {bold}n{/bold}:name {bold}?{/bold}:help${sessionInfo}${filterHint}`);
+  bar.setContent(`${tab1}${tab2}${tab3}  {bold}q{/bold}:quit {bold}r{/bold}:refresh {bold}n{/bold}:rename {bold}?{/bold}:help ${seconds}s${sessionInfo}${filterHint}`);
 }
 
 module.exports = { createStatusBar, updateStatusBar };
