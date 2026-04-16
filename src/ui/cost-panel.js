@@ -6,7 +6,7 @@ const I = config.ICONS;
 function createCostPanel(screen) {
   const box = createSection({
     parent: screen,
-    bottom: 1,
+    top: 30,
     left: 0,
     width: '100%',
     height: 3,

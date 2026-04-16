@@ -229,23 +229,41 @@ function createApp(options = {}) {
       const subLines = updateSubagentsPanel(subagentsPanel, agents) || 1;
       const subHeight = Math.max(4, Math.min(subLines + 2, 16));
       subagentsPanel.height = subHeight;
-      skillPanel.top = 12 + subHeight;
 
       const conversations = parseConversation(jsonlInfo.jsonlPath);
       const convLines = updateSkillPanel(skillPanel, conversations) || 1;
-      const skillHeight = Math.max(3, Math.min(convLines + 2, 22));
-      skillPanel.height = skillHeight;
+      const convNeed = convLines + 2;
 
       const recaps = parseRecaps(jsonlInfo.jsonlPath);
       const recapLines = updateRecapPanel(recapPanel, recaps);
-      const recapHeight = Math.max(3, Math.min(recapLines + 2, 12));
+      const recapNeed = recapLines + 2;
+
+      // 반응형 레이아웃: 터미널 높이에서 고정 영역을 빼고 conversation+recap에 분배
+      // 고정: header(7) + tools(5) + subagents(dyn) + cost(3) + statusbar(1) = 16 + subH
+      const totalH = screen.height || 40;
+      const fixedH = 7 + 5 + subHeight + 3 + 1;
+      const available = Math.max(6, totalH - fixedH);
+
+      let skillHeight, recapHeight;
+      if (convNeed + recapNeed <= available) {
+        skillHeight = convNeed;
+        recapHeight = recapNeed;
+      } else {
+        // 비율 분배 (conversation 60%, recap 40%)
+        skillHeight = Math.max(3, Math.min(convNeed, Math.floor(available * 0.6)));
+        recapHeight = Math.max(3, available - skillHeight);
+      }
+
       const skillTop = 12 + subHeight;
       skillPanel.top = skillTop;
+      skillPanel.height = skillHeight;
       recapPanel.top = skillTop + skillHeight;
       recapPanel.height = recapHeight;
 
       const cost = parseCost();
       updateCostPanel(costPanel, cost);
+      costPanel.top = skillTop + skillHeight + recapHeight;
+      costPanel.bottom = undefined;
     } else {
       // Flow tab
       allFlowEvents = parseFlowEvents(jsonlInfo.jsonlPath);

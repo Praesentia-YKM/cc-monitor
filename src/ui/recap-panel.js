@@ -35,17 +35,19 @@ function updateRecapPanel(box, recaps) {
 
     lines.push(`  ${idx} {cyan-fg}${r.timeStr}{/cyan-fg} {gray-fg}${tokenInfo} ${durInfo}{/gray-fg}`);
 
+    const maxWidth = (box.width || 80) - 6;
+
     if (r.userMessages.length > 0) {
-      r.userMessages.slice(0, 3).forEach(m => {
-        lines.push(`    {gray-fg}\u2022{/gray-fg} ${truncate(m, 60)}`);
+      r.userMessages.slice(0, 5).forEach(m => {
+        lines.push(`    {gray-fg}\u2022{/gray-fg} ${truncate(m, maxWidth - 6)}`);
       });
-      if (r.userMessages.length > 3) {
-        lines.push(`    {gray-fg}... +${r.userMessages.length - 3} more{/gray-fg}`);
+      if (r.userMessages.length > 5) {
+        lines.push(`    {gray-fg}... +${r.userMessages.length - 5} more{/gray-fg}`);
       }
     }
 
     if (r.currentWork) {
-      lines.push(`  {green-fg}Work:{/green-fg} ${truncate(r.currentWork.split('\n')[0], 55)}`);
+      lines.push(`  {green-fg}Work:{/green-fg} ${truncate(r.currentWork.split('\n')[0], maxWidth - 8)}`);
     }
   }
 
