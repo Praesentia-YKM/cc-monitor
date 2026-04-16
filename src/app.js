@@ -4,6 +4,7 @@ const { createHeader, updateHeader } = require('./ui/header');
 const { createToolsPanel, updateToolsPanel } = require('./ui/tools-panel');
 const { createSubagentsPanel, updateSubagentsPanel } = require('./ui/subagents-panel');
 const { createSkillPanel, updateSkillPanel } = require('./ui/skill-panel');
+const { createRecapPanel, updateRecapPanel } = require('./ui/recap-panel');
 const { createCostPanel, updateCostPanel } = require('./ui/cost-panel');
 const { createStatusBar, updateStatusBar } = require('./ui/status-bar');
 const {
@@ -21,6 +22,7 @@ const { findActiveSessions, findSessionJsonl } = require('./parsers/session-find
 const { parseSession, calcContextPercent, calcIdleTime, calcAge } = require('./parsers/session-parser');
 const { parseSubagents } = require('./parsers/subagent-parser');
 const { parseSkillHistory } = require('./parsers/history-parser');
+const { parseRecaps } = require('./parsers/recap-parser');
 const { parseCost } = require('./parsers/cost-parser');
 const { parseFlowEvents, buildFlowSummary } = require('./parsers/flow-parser');
 const { parseConfig } = require('./parsers/config-parser');
@@ -51,6 +53,9 @@ function createApp(options = {}) {
 
   const skillPanel = createSkillPanel(screen, 18);
   overviewPanels.push(skillPanel);
+
+  const recapPanel = createRecapPanel(screen);
+  overviewPanels.push(recapPanel);
 
   const costPanel = createCostPanel(screen);
   overviewPanels.push(costPanel);
@@ -162,6 +167,7 @@ function createApp(options = {}) {
         toolsPanel.setContent('');
         subagentsPanel.setContent('');
         skillPanel.setContent('');
+        recapPanel.setContent('');
         costPanel.setContent('');
       } else if (currentTab === 2) {
         flowSummary.setContent('{center}{bold}No active sessions.{/bold}{/center}');
@@ -198,6 +204,7 @@ function createApp(options = {}) {
         toolsPanel.setContent('');
         subagentsPanel.setContent('');
         skillPanel.setContent('');
+        recapPanel.setContent('');
         costPanel.setContent('');
       } else {
         flowSummary.setContent(`{center}${msg}{/center}`);
@@ -225,6 +232,13 @@ function createApp(options = {}) {
 
       const skills = parseSkillHistory(session.sessionId);
       updateSkillPanel(skillPanel, skills);
+
+      const recaps = parseRecaps(jsonlInfo.jsonlPath);
+      const recapLines = updateRecapPanel(recapPanel, recaps);
+      const recapHeight = Math.max(4, Math.min(recapLines + 2, 12));
+      recapPanel.height = recapHeight;
+      recapPanel.bottom = 4;
+      skillPanel.bottom = 4 + recapHeight;
 
       const cost = parseCost();
       updateCostPanel(costPanel, cost);
