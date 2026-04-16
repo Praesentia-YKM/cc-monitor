@@ -22,9 +22,11 @@ Session status, tool usage, subagents, recap, cost at a glance.
 │   Total: 3  ● Running: 1  ✓ Done: 2                                    │
 │   ● code-reviewer       2m 31s   Review authentication module           │
 │   ✓ Explore               45s    Find API endpoints                     │
-├─ ★ Recent Activity ──────────────────────────────────────────────────────┤
-│   ★ 14:23  /commit                                                      │
-│     14:20  Add user auth middleware                                      │
+├─ ▬ Recent Conversation ───────────────────────────────────────────────────┤
+│   ▶ 14:23  Add JWT token refresh logic                                  │
+│     ◀ JWT refresh 로직을 구현하겠습니다. 먼저 현재 토큰...             │
+│   ▶ 14:20  Fix the login validation bug                                 │
+│     ◀ 로그인 검증 버그를 확인하겠습니다. validation 로직을...          │
 ├─ ↻ Recap ────────────────────────────────────────────────────────────────┤
 │   #1 14:05  150.2K→45.3K (8s)                                          │
 │     • Add authentication to the API                                     │
@@ -42,7 +44,7 @@ Session status, tool usage, subagents, recap, cost at a glance.
 | **Header** | Session ID, model, elapsed time, idle time, context window usage bar |
 | **Tools & Files** | Tool call counts with percentages + Read/Write/Search activity bars |
 | **Subagents** | Running and completed subagents with type, duration, description |
-| **Recent Activity** | Latest user inputs and skill invocations |
+| **Recent Conversation** | User question + AI response summary pairs |
 | **Recap** | Context compaction history — token changes, user message summary, current work |
 | **Cost** | Today's total API cost |
 

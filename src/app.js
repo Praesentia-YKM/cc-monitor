@@ -21,7 +21,7 @@ const {
 const { findActiveSessions, findSessionJsonl } = require('./parsers/session-finder');
 const { parseSession, calcContextPercent, calcIdleTime, calcAge } = require('./parsers/session-parser');
 const { parseSubagents } = require('./parsers/subagent-parser');
-const { parseSkillHistory } = require('./parsers/history-parser');
+const { parseConversation } = require('./parsers/conversation-parser');
 const { parseRecaps } = require('./parsers/recap-parser');
 const { parseCost } = require('./parsers/cost-parser');
 const { parseFlowEvents, buildFlowSummary } = require('./parsers/flow-parser');
@@ -231,16 +231,17 @@ function createApp(options = {}) {
       subagentsPanel.height = subHeight;
       skillPanel.top = 12 + subHeight;
 
-      const skills = parseSkillHistory(session.sessionId);
-      updateSkillPanel(skillPanel, skills);
+      const conversations = parseConversation(jsonlInfo.jsonlPath);
+      const convLines = updateSkillPanel(skillPanel, conversations) || 1;
+      const skillHeight = Math.max(3, Math.min(convLines + 2, 14));
+      skillPanel.height = skillHeight;
 
       const recaps = parseRecaps(jsonlInfo.jsonlPath);
       const recapLines = updateRecapPanel(recapPanel, recaps);
       const recapHeight = Math.max(3, Math.min(recapLines + 2, 12));
-      // Layout: subagents(top:12,h:dyn) → skill(top:12+subH,h:6) → recap(top:after skill) → cost(bottom:1,h:3) → statusBar(h:1)
       const skillTop = 12 + subHeight;
       skillPanel.top = skillTop;
-      recapPanel.top = skillTop + 6;
+      recapPanel.top = skillTop + skillHeight;
       recapPanel.height = recapHeight;
 
       const cost = parseCost();
