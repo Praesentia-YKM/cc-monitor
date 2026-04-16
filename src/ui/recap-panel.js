@@ -6,10 +6,10 @@ const I = config.ICONS;
 function createRecapPanel(screen) {
   const box = createSection({
     parent: screen,
-    bottom: 4,
+    top: 24,
     left: 0,
     width: '100%',
-    height: 6,
+    height: 3,
     label: ` ${I.recap} Recap `,
     tags: true,
     scrollable: true,

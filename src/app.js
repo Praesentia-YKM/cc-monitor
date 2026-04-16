@@ -121,6 +121,7 @@ function createApp(options = {}) {
     overviewPanels.forEach(p => { p.hidden = tab !== 1; });
     flowPanels.forEach(p => { p.hidden = tab !== 2; });
     configPanels.forEach(p => { p.hidden = tab !== 3; });
+    screen.clearRegion(0, screen.width, 0, screen.height - 1);
     screen.render();
   }
 
@@ -235,10 +236,12 @@ function createApp(options = {}) {
 
       const recaps = parseRecaps(jsonlInfo.jsonlPath);
       const recapLines = updateRecapPanel(recapPanel, recaps);
-      const recapHeight = Math.max(4, Math.min(recapLines + 2, 12));
+      const recapHeight = Math.max(3, Math.min(recapLines + 2, 12));
+      // Layout: subagents(top:12,h:dyn) → skill(top:12+subH,h:6) → recap(top:after skill) → cost(bottom:1,h:3) → statusBar(h:1)
+      const skillTop = 12 + subHeight;
+      skillPanel.top = skillTop;
+      recapPanel.top = skillTop + 6;
       recapPanel.height = recapHeight;
-      recapPanel.bottom = 4;
-      skillPanel.bottom = 4 + recapHeight;
 
       const cost = parseCost();
       updateCostPanel(costPanel, cost);

@@ -8,7 +8,7 @@ function createSkillPanel(screen, top) {
     top,
     left: 0,
     width: '100%',
-    bottom: 4,
+    height: 6,
     label: ` ${I.skill} Recent Activity `,
     tags: true,
     scrollable: true,
