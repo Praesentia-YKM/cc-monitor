@@ -1,6 +1,6 @@
 const path = require('path');
 const { readJsonlIncremental } = require('../utils/jsonl-reader');
-const { parseTimestamp, formatTime } = require('../utils/time-format');
+const { parseTimestamp, formatTime, formatTokenCount } = require('../utils/time-format');
 const { EVENT_TYPES } = require('../constants/event-types');
 
 function parseFlowEvents(jsonlPath) {
@@ -28,9 +28,24 @@ function parseFlowEvents(jsonlPath) {
       events.push({
         type: EVENT_TYPES.USER_MSG,
         ts, timeStr, msgIndex,
-        label: truncate(displayText, 60),
+        label: truncate(displayText, 120),
         detail: displayText,
         isCommand,
+      });
+    }
+
+    if (entry.type === 'system' && entry.subtype === 'compact_boundary') {
+      const meta = entry.compactMetadata || {};
+      const pre = formatTokenCount(meta.preTokens || 0);
+      const post = formatTokenCount(meta.postTokens || 0);
+      const dur = meta.durationMs ? Math.round(meta.durationMs / 1000) : 0;
+      events.push({
+        type: EVENT_TYPES.COMPACT,
+        ts, timeStr,
+        label: `${pre} \u2192 ${post} (${dur}s)`,
+        detail: `Context compaction: ${pre} → ${post}, took ${dur}s`,
+        preTokens: meta.preTokens || 0,
+        postTokens: meta.postTokens || 0,
       });
     }
 
@@ -128,6 +143,7 @@ function buildFlowSummary(events) {
     memories: counts[EVENT_TYPES.MEMORY_LOADED] || 0,
     skillCalls: counts[EVENT_TYPES.SKILL_CALLED] || 0,
     userMsgs: counts[EVENT_TYPES.USER_MSG] || 0,
+    compactions: counts[EVENT_TYPES.COMPACT] || 0,
   };
 }
 

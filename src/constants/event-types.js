@@ -8,6 +8,7 @@ const EVENT_TYPES = {
   TOOL_USE: 'tool',
   USER_MSG: 'user',
   ASSISTANT_MSG: 'assistant',
+  COMPACT: 'compact',
 };
 
 module.exports = { EVENT_TYPES };

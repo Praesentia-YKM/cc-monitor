@@ -56,6 +56,7 @@ module.exports = {
     taskDone: '\u25CF',   // ●
     separator: '\u2502',  // │
     folder: '\u25B8',     // ▸
+    recap: '\u21BB',      // ↻
     warn: '\u26A0',       // ⚠
   },
 };

@@ -8,8 +8,10 @@ function isProcessAlive(pid) {
   try {
     process.kill(pid, 0);
     return true;
-  } catch {
-    return false;
+  } catch (e) {
+    // EPERM = process exists but no permission to signal (Windows 권한 차이)
+    // ESRCH = process does not exist
+    return e.code === 'EPERM';
   }
 }
 

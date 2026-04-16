@@ -12,12 +12,18 @@ const {
   createFlowFilterBar, updateFlowFilterBar,
 } = require('./ui/flow-panel');
 
+const {
+  createConfigSummaryPanel, updateConfigSummaryPanel,
+  createConfigTreePanel, updateConfigTreePanel,
+} = require('./ui/config-panel');
+
 const { findActiveSessions, findSessionJsonl } = require('./parsers/session-finder');
 const { parseSession, calcContextPercent, calcIdleTime, calcAge } = require('./parsers/session-parser');
 const { parseSubagents } = require('./parsers/subagent-parser');
 const { parseSkillHistory } = require('./parsers/history-parser');
 const { parseCost } = require('./parsers/cost-parser');
 const { parseFlowEvents, buildFlowSummary } = require('./parsers/flow-parser');
+const { parseConfig } = require('./parsers/config-parser');
 const { EVENT_TYPES } = require('./constants/event-types');
 const { resetCache } = require('./utils/jsonl-reader');
 const { createHelpOverlay } = require('./ui/help-overlay');
@@ -31,7 +37,7 @@ function createApp(options = {}) {
   const screen = createScreen();
 
   // === Tab 1: Overview ===
-  // Layout: Header(0~6) → Tools(7~11) → Subagents(12~17) → Skills(18~bottom:4) → Cost(bottom:1, h:3) → StatusBar(bottom:0)
+  // Layout: Header(0~6) → Tools(7~11) → Subagents(12~dyn) → Skills(dyn~bottom) → Recap(bottom:4, dyn h) → Cost(bottom:1, h:3) → StatusBar(bottom:0)
   const overviewPanels = [];
 
   const header = createHeader(screen);
@@ -60,6 +66,15 @@ function createApp(options = {}) {
 
   const flowFilterBar = createFlowFilterBar(screen);
   flowPanels.push(flowFilterBar);
+
+  // === Tab 3: Config ===
+  const configPanels = [];
+
+  const configSummary = createConfigSummaryPanel(screen);
+  configPanels.push(configSummary);
+
+  const configTree = createConfigTreePanel(screen);
+  configPanels.push(configTree);
 
   // === Rename prompt ===
   const blessed = require('blessed');
@@ -98,9 +113,9 @@ function createApp(options = {}) {
 
   function showTab(tab) {
     currentTab = tab;
-    const showOverview = tab === 1;
-    overviewPanels.forEach(p => { p.hidden = !showOverview; });
-    flowPanels.forEach(p => { p.hidden = showOverview; });
+    overviewPanels.forEach(p => { p.hidden = tab !== 1; });
+    flowPanels.forEach(p => { p.hidden = tab !== 2; });
+    configPanels.forEach(p => { p.hidden = tab !== 3; });
     screen.render();
   }
 
@@ -130,6 +145,15 @@ function createApp(options = {}) {
   }
 
   function refresh() {
+    if (currentTab === 3) {
+      const configData = parseConfig();
+      updateConfigSummaryPanel(configSummary, configData);
+      updateConfigTreePanel(configTree, configData);
+      updateStatusBar(statusBar, config.POLL_INTERVAL_MS, 0, 0, currentTab);
+      screen.render();
+      return;
+    }
+
     activeSessions = findActiveSessions();
 
     if (activeSessions.length === 0) {
@@ -139,7 +163,7 @@ function createApp(options = {}) {
         subagentsPanel.setContent('');
         skillPanel.setContent('');
         costPanel.setContent('');
-      } else {
+      } else if (currentTab === 2) {
         flowSummary.setContent('{center}{bold}No active sessions.{/bold}{/center}');
         flowTimeline.setContent('');
       }
@@ -156,11 +180,28 @@ function createApp(options = {}) {
     const jsonlInfo = findSessionJsonl(session);
 
     if (!jsonlInfo) {
+      // JSONL이 있는 다른 세션으로 fallback 시도
+      let fallbackFound = false;
+      for (let i = 0; i < activeSessions.length; i++) {
+        if (i === currentSessionIdx) continue;
+        const fallbackJsonl = findSessionJsonl(activeSessions[i]);
+        if (fallbackJsonl) {
+          currentSessionIdx = i;
+          fallbackFound = true;
+          return refresh();
+        }
+      }
+
       const msg = `Session ${session.sessionId.substring(0, 8)} found but no JSONL data yet.`;
       if (currentTab === 1) {
         header.box.setContent(`{center}${msg}{/center}`);
+        toolsPanel.setContent('');
+        subagentsPanel.setContent('');
+        skillPanel.setContent('');
+        costPanel.setContent('');
       } else {
         flowSummary.setContent(`{center}${msg}{/center}`);
+        flowTimeline.setContent('');
       }
       screen.render();
       return;
@@ -254,13 +295,16 @@ function createApp(options = {}) {
     refresh();
   });
 
+  screen.key(['3'], () => {
+    if (helpVisible) return;
+    showTab(3);
+    refresh();
+  });
+
   screen.key(['up'], () => {
     if (helpVisible) { helpOverlay.scroll(-3); screen.render(); return; }
-    if (currentTab === 2) {
-      flowTimeline.scroll(-3);
-      screen.render();
-      return;
-    }
+    if (currentTab === 2) { flowTimeline.scroll(-3); screen.render(); return; }
+    if (currentTab === 3) { configTree.scroll(-3); screen.render(); return; }
     if (activeSessions.length > 1) {
       currentSessionIdx = (currentSessionIdx - 1 + activeSessions.length) % activeSessions.length;
       resetCache();
@@ -270,11 +314,8 @@ function createApp(options = {}) {
 
   screen.key(['down'], () => {
     if (helpVisible) { helpOverlay.scroll(3); screen.render(); return; }
-    if (currentTab === 2) {
-      flowTimeline.scroll(3);
-      screen.render();
-      return;
-    }
+    if (currentTab === 2) { flowTimeline.scroll(3); screen.render(); return; }
+    if (currentTab === 3) { configTree.scroll(3); screen.render(); return; }
     if (activeSessions.length > 1) {
       currentSessionIdx = (currentSessionIdx + 1) % activeSessions.length;
       resetCache();

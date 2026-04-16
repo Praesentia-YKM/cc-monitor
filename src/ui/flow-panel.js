@@ -13,6 +13,7 @@ const EVENT_STYLE = {
   [EVENT_TYPES.SKILL_LISTED]:   { icon: '\u2261', color: 'blue',   tag: 'SKILL' },
   [EVENT_TYPES.SKILL_CALLED]:   { icon: '\u2726', color: 'green',  tag: 'SKILL' },
   [EVENT_TYPES.TOOL_USE]:       { icon: '\u25AA', color: 'white',  tag: 'TOOL' },
+  [EVENT_TYPES.COMPACT]:        { icon: '\u21BB', color: 'red',    tag: 'RECAP' },
 };
 
 function createFlowSummaryPanel(screen) {
@@ -40,7 +41,10 @@ function updateFlowSummaryPanel(box, summary) {
 
   const line2 = `{gray-fg}Skills{/gray-fg} {bold}${summary.skillCalls}{/bold}`
     + `  {gray-fg}${I.separator}{/gray-fg}  `
-    + `{cyan-fg}User msgs{/cyan-fg} {bold}${summary.userMsgs}{/bold}`;
+    + `{cyan-fg}User msgs{/cyan-fg} {bold}${summary.userMsgs}{/bold}`
+    + (summary.compactions > 0
+      ? `  {gray-fg}${I.separator}{/gray-fg}  {red-fg}\u21BB Compactions{/red-fg} {bold}${summary.compactions}{/bold}`
+      : '');
 
   box.setContent(`${line1}\n${line2}`);
 }
@@ -115,6 +119,16 @@ function updateFlowTimelinePanel(box, events, scrollToBottom) {
 
     const event = item;
     const style = EVENT_STYLE[event.type] || { icon: '?', color: 'white', tag: '???' };
+
+    if (event.type === EVENT_TYPES.COMPACT) {
+      lines.push('');
+      lines.push(`{red-fg}  ${'═'.repeat(70)}{/red-fg}`);
+      const time = event.timeStr ? `{gray-fg}${event.timeStr}{/gray-fg}` : '        ';
+      lines.push(`  ${time}  {red-fg}{bold}\u21BB [RECAP] Context Compaction{/bold}{/red-fg}  {yellow-fg}${event.label}{/yellow-fg}`);
+      lines.push(`{red-fg}  ${'═'.repeat(70)}{/red-fg}`);
+      lines.push('');
+      continue;
+    }
 
     if (event.type === EVENT_TYPES.USER_MSG && lastMsgIdx !== null) {
       lines.push(`{gray-fg}  ${'─'.repeat(70)}{/gray-fg}`);
