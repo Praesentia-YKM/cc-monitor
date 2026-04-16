@@ -30,23 +30,23 @@ function createFlowSummaryPanel(screen) {
 }
 
 function updateFlowSummaryPanel(box, summary) {
-  const line1 = `{gray-fg}Events{/gray-fg} {bold}${summary.totalEvents}{/bold}  `
-    + `{gray-fg}${I.separator}{/gray-fg}  `
-    + `{green-fg}${I.agentDone} Hooks{/green-fg} {bold}${summary.hooksSuccess}{/bold}`
-    + (summary.hooksCancelled > 0 ? ` {gray-fg}(${summary.hooksCancelled} skipped){/gray-fg}` : '')
-    + `  {gray-fg}${I.separator}{/gray-fg}  `
-    + `{yellow-fg}\u2630 Rules{/yellow-fg} {bold}${summary.rules}{/bold}`
-    + `  {gray-fg}${I.separator}{/gray-fg}  `
-    + `{magenta-fg}${I.skill} Memory{/magenta-fg} {bold}${summary.memories}{/bold}`;
+  const items = [
+    `{gray-fg}Evt{/gray-fg} {bold}${summary.totalEvents}{/bold}`,
+    `{green-fg}${I.agentDone}Hook{/green-fg} {bold}${summary.hooksSuccess}{/bold}`,
+    `{yellow-fg}\u2630Rule{/yellow-fg} {bold}${summary.rules}{/bold}`,
+    `{magenta-fg}${I.skill}Mem{/magenta-fg} {bold}${summary.memories}{/bold}`,
+    `{green-fg}Skill{/green-fg} {bold}${summary.skillCalls}{/bold}`,
+    `{cyan-fg}User{/cyan-fg} {bold}${summary.userMsgs}{/bold}`,
+  ];
+  if (summary.hooksCancelled > 0) {
+    items.push(`{gray-fg}Skip ${summary.hooksCancelled}{/gray-fg}`);
+  }
+  if (summary.compactions > 0) {
+    items.push(`{red-fg}\u21BBRecap{/red-fg} {bold}${summary.compactions}{/bold}`);
+  }
 
-  const line2 = `{gray-fg}Skills{/gray-fg} {bold}${summary.skillCalls}{/bold}`
-    + `  {gray-fg}${I.separator}{/gray-fg}  `
-    + `{cyan-fg}User msgs{/cyan-fg} {bold}${summary.userMsgs}{/bold}`
-    + (summary.compactions > 0
-      ? `  {gray-fg}${I.separator}{/gray-fg}  {red-fg}\u21BB Compactions{/red-fg} {bold}${summary.compactions}{/bold}`
-      : '');
-
-  box.setContent(`${line1}\n${line2}`);
+  const sep = ` {gray-fg}${I.separator}{/gray-fg} `;
+  box.setContent(items.join(sep));
 }
 
 function createFlowTimelinePanel(screen) {
