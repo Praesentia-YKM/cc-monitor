@@ -121,7 +121,7 @@ function createApp(options = {}) {
     overviewPanels.forEach(p => { p.hidden = tab !== 1; });
     flowPanels.forEach(p => { p.hidden = tab !== 2; });
     configPanels.forEach(p => { p.hidden = tab !== 3; });
-    screen.clearRegion(0, screen.width, 0, screen.height - 1);
+    screen.realloc();
     screen.render();
   }
 
