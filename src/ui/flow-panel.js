@@ -64,8 +64,7 @@ function createFlowTimelinePanel(screen) {
       style: { bg: 'cyan' },
     },
     mouse: true,
-    keys: true,
-    vi: true,
+    keys: false,
   });
   return box;
 }
