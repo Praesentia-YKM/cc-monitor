@@ -106,18 +106,18 @@ function updateHeader(header, session, sessionData, contextPct, ageMs, idleMs, a
     ? `{yellow-fg}{bold}"${customName}"{/bold}{/yellow-fg}  `
     : '';
   lines.push(
-    `${namePart}{gray-fg}Session{/gray-fg} {bold}${sid}{/bold}  `
-    + `{gray-fg}${I.model} Model{/gray-fg} {bold}${shortModel}{/bold}  `
-    + `{gray-fg}${I.clock} Age{/gray-fg} {bold}${formatDuration(ageMs)}{/bold}  `
-    + `{gray-fg}${I.idle} Idle{/gray-fg} {bold}${formatDuration(idleMs)}{/bold}`
+    `${namePart}{bold}${sid}{/bold} `
+    + `{gray-fg}${I.model}{/gray-fg}{bold}${shortModel}{/bold} `
+    + `{gray-fg}${I.clock}Age{/gray-fg} {bold}${formatDuration(ageMs)}{/bold} `
+    + `{gray-fg}${I.idle}Idle{/gray-fg} {bold}${formatDuration(idleMs)}{/bold}`
   );
   lines.push(`{gray-fg}Context{/gray-fg} ${bar} {${ctxColor}-fg}{bold}${contextPct}%{/bold}{/${ctxColor}-fg}${ctxWarn}`);
   lines.push(
-    `{gray-fg}${I.msg} Msgs{/gray-fg} U:{bold}${sessionData.userMessages}{/bold} A:{bold}${sessionData.assistantMessages}{/bold}  `
-    + `{gray-fg}${I.token} Tokens{/gray-fg} In:{bold}${formatTokenCount(sessionData.tokens.input)}{/bold} `
-    + `Out:{bold}${formatTokenCount(sessionData.tokens.output)}{/bold} `
-    + `CW:{bold}${formatTokenCount(sessionData.tokens.cacheWrite)}{/bold} `
-    + `CR:{bold}${formatTokenCount(sessionData.tokens.cacheRead)}{/bold}`
+    `{gray-fg}${I.msg}Msg{/gray-fg} U:{bold}${sessionData.userMessages}{/bold} A:{bold}${sessionData.assistantMessages}{/bold} `
+    + `{gray-fg}${I.token}Tk{/gray-fg} I:{bold}${formatTokenCount(sessionData.tokens.input)}{/bold} `
+    + `O:{bold}${formatTokenCount(sessionData.tokens.output)}{/bold} `
+    + `W:{bold}${formatTokenCount(sessionData.tokens.cacheWrite)}{/bold} `
+    + `R:{bold}${formatTokenCount(sessionData.tokens.cacheRead)}{/bold}`
   );
 
   const neededHeight = lines.length + 2;
