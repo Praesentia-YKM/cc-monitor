@@ -140,6 +140,53 @@ Displays the current Claude Code configuration tree — CLAUDE.md, rules, hooks,
 
 ---
 
+## Tab 5 — Tree
+
+활성 세션의 서브에이전트 계층 구조를 실시간 트리로 표시. `Agent` tool_use 호출의 `parentToolUseID`를 따라 부모-자식 관계를 정확히 그립니다.
+
+```
+┌─ ● Agent Execution Tree — Mode: [recent]  (a=toggle) ──────────────────┐
+│ ▶ ◉ main (opus-4-6)  ◷ 1h 23m                                           │
+│      🛠 Read:45 Grep:20 Bash:15 Edit:12                                 │
+│   ├─ ● feature-dev:code-explorer  sonnet  ◷ 2m 31s  running            │
+│   │     "Trace the auth middleware flow"                                │
+│   │     🛠 Glob:3 Grep:8 Read:12                                        │
+│   │   └─ ● Explore  sonnet  ◷ 45s  running                              │
+│   │        "Find API endpoints"                                         │
+│   │        🛠 Glob:5 Read:7                                             │
+│   └─ ↻ code-reviewer  sonnet  ◷ 1m 5s  done                             │
+│        "Review authentication module"                                   │
+│        🛠 Read:15 Grep:4                                                │
+├─ Details ───────────────────────────────────────────────────────────────┤
+│  Selected: code-reviewer (a2a48fe0...)                                  │
+│  Description: Review authentication module                              │
+│  Status: done  •  Started 14:21:08  •  Duration 1m 5s                   │
+│  Model: sonnet-4-6  •  Tokens In: 12.4K  Out: 2.1K                      │
+│  Tools: Read:15 Grep:4                                                  │
+│  Diagnostics: 0 errors, 0 denied                                        │
+└──────── [1:Overview] [2:Flow] [3:Config] [4:Metrics] [5:Tree] ──────────┘
+```
+
+### 키보드
+
+| 키 | 동작 |
+|-----|------|
+| `↑/↓` | 노드 선택 이동 |
+| `[` / `]` | 세션 전환 (Tab 5에서는 ↑↓ 대신) |
+| `a` | `running+recent` ↔ `all` 토글 |
+
+### 상태 아이콘
+
+| 아이콘 | 의미 |
+|--------|------|
+| `●` (녹색) | running |
+| `✓` (회색) | done |
+| `↻` (파랑) | recent done (5분 이내 완료) |
+| `⚠` (빨강) | error |
+| `◉` (청록) | session root |
+
+---
+
 ## Install
 
 ### npm (from GitHub)
