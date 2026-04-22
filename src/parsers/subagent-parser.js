@@ -109,6 +109,7 @@ function parseSubagents(projectDir, sessionId) {
       let model = null;
       let tokensIn = 0;
       let tokensOut = 0;
+      let parentToolUseID = null;
       const tools = {};
       let diagnostics = { errors: [], deniedCount: 0, lastActivity: '', repeatPattern: null };
 
@@ -116,6 +117,7 @@ function parseSubagents(projectDir, sessionId) {
         const { entries } = readJsonlFile(jsonlPath);
         if (entries.length > 0) {
           startTime = entries[0].timestamp;
+          parentToolUseID = entries[0].parentToolUseID || null;
           const lastEntry = entries[entries.length - 1];
 
           if (lastEntry.type === 'end-of-session') {
@@ -172,11 +174,14 @@ function parseSubagents(projectDir, sessionId) {
         description: meta.description || '',
         model,
         isRunning,
+        startTime,
+        endTime,
         elapsedMs: elapsed,
         tokensIn,
         tokensOut,
         tools,
         diagnostics,
+        parentToolUseID,
       });
     }
 
