@@ -35,8 +35,8 @@ cc-monitor의 현재 Subagents 패널은 **flat 리스트**만 보여준다. 메
 ### 3.1 주 사용처: 실시간 관찰
 세션 실행 중 에이전트 spawn을 live로 관찰하는 것이 주목적. 사후 분석이나 비용 분석은 범위 외.
 
-### 3.2 UI 위치: 새 4번 "Tree" 탭
-기존 Overview/Flow/Config 3탭에 **4번째 Tree 탭** 추가. 별도 화면으로 계속 켜놓고 볼 수 있고, 노드당 풍부한 정보(duration, tool summary, description) 표시 공간 확보.
+### 3.2 UI 위치: 새 5번 "Tree" 탭
+기존 Overview/Flow/Config/Skill Metrics 4탭에 **5번째 Tree 탭** 추가. 별도 화면으로 계속 켜놓고 볼 수 있고, 노드당 풍부한 정보(duration, tool summary, description) 표시 공간 확보.
 
 ### 3.3 트리 범위: 서브에이전트 계층 + 노드별 툴 요약
 툴 콜은 노드로 만들지 않고, 각 에이전트 노드에 툴 사용 요약(`Read:12 Bash:3 ...`)만 부착. `subagent-parser.js`가 이미 수집 중인 `tools` 객체 재활용.
@@ -90,8 +90,8 @@ JSONL 엔트리에 존재하는 `parentToolUseID` 필드로 명시적 링크 조
 |------|------|------|
 | `src/parsers/tree-builder.js` | **신규** | 트리 조립 로직. subagent-parser 결과 + main JSONL Agent tool_use 수집 → TreeNode 그래프 반환 |
 | `src/ui/tree-panel.js` | **신규** | 4번째 탭 UI. 트리 렌더러 + 디테일 서브패널 |
-| `src/ui/layout.js` | 수정 | 탭 추가: `[1:Overview] [2:Flow] [3:Config] [4:Tree]` |
-| `src/app.js` | 수정 | 탭 키바인딩(`4`), Tree 탭 전용 키(`a`, `[`, `]`, ↑↓) 라우팅 |
+| `src/ui/layout.js` | 수정 | 탭 추가: `[1:Overview] [2:Flow] [3:Config] [4:Metrics] [5:Tree]` |
+| `src/app.js` | 수정 | 탭 키바인딩(`5`), Tree 탭 전용 키(`a`, `[`, `]`, ↑↓) 라우팅 |
 | `src/parsers/subagent-parser.js` | 수정(최소) | `parentToolUseID`를 에이전트 객체에 포함 |
 | `src/ui/help-overlay.js` | 수정 | Tree 탭 단축키 도움말 추가 |
 | `README.md` | 수정 | Tab 4 섹션 추가 |
@@ -190,8 +190,8 @@ buildTree(projectDir, sessionId) → {
 │  Last activity: "Completed review. Found 2 issues..."                   │
 │  Diagnostics: 0 errors, 0 denied                                        │
 ├──────────────────────────────────────────────────────────────────────────┤
-│  ↑↓:select  [/]:session  a:all  c/e:collapse/expand  ?:help  q:quit     │
-└──────────────── [1:Overview] [2:Flow] [3:Config] [4:Tree] ──────────────┘
+│  ↑↓:select  [/]:session  a:all  ?:help  q:quit                          │
+└──── [1:Overview] [2:Flow] [3:Config] [4:Metrics] [5:Tree] ──────────────┘
 ```
 
 ### 6.1 구성
