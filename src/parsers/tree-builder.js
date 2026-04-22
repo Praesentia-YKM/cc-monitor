@@ -1,4 +1,8 @@
+const fs = require('fs');
+const path = require('path');
 const logger = require('../utils/logger');
+const { readJsonlFile } = require('../utils/jsonl-reader');
+const { parseSubagents } = require('./subagent-parser');
 
 function collectAgentToolUses(entries) {
   const map = new Map();
@@ -122,4 +126,25 @@ function buildTree({ sessionId, mainEntries, subagents, mainEntriesBySubagent })
   return { root, byId, flatten };
 }
 
-module.exports = { collectAgentToolUses, buildTree };
+function loadTreeData(projectDir, sessionId, mainJsonlPath) {
+  const mainEntries = mainJsonlPath && fs.existsSync(mainJsonlPath)
+    ? readJsonlFile(mainJsonlPath).entries
+    : [];
+
+  const subagents = parseSubagents(projectDir, sessionId);
+
+  const mainEntriesBySubagent = new Map();
+  const subagentsDir = path.join(projectDir, sessionId, 'subagents');
+  if (fs.existsSync(subagentsDir)) {
+    for (const sa of subagents) {
+      const jsonl = path.join(subagentsDir, `${sa.id}.jsonl`);
+      if (fs.existsSync(jsonl)) {
+        mainEntriesBySubagent.set(sa.id, readJsonlFile(jsonl).entries);
+      }
+    }
+  }
+
+  return buildTree({ sessionId, mainEntries, subagents, mainEntriesBySubagent });
+}
+
+module.exports = { collectAgentToolUses, buildTree, loadTreeData };
