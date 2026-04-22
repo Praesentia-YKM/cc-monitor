@@ -9,7 +9,7 @@
   "scripts": {
     "start": "node bin/cc-monitor.js",
     "dev": "node bin/cc-monitor.js --debug",
-    "test": "node test/utils.test.js && node test/parsers.test.js"
+    "test": "node test/utils.test.js && node test/parsers.test.js && node test/tree-builder.test.js"
   },
   "files": [
     "bin/",
