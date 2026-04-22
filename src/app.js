@@ -18,6 +18,14 @@ const {
   createConfigTreePanel, updateConfigTreePanel,
 } = require('./ui/config-panel');
 
+const {
+  createMetricsSummaryPanel, updateMetricsSummaryPanel,
+  createMetricsTablePanel, updateMetricsTablePanel,
+} = require('./ui/skill-metrics-panel');
+
+const { createTreePanel, updateTreePanel, moveCursor: moveTreeCursor, toggleMode: toggleTreeMode } = require('./ui/tree-panel');
+const { loadTreeData } = require('./parsers/tree-builder');
+
 const { findActiveSessions, findSessionJsonl } = require('./parsers/session-finder');
 const { parseSession, calcContextPercent, calcIdleTime, calcAge } = require('./parsers/session-parser');
 const { parseSubagents } = require('./parsers/subagent-parser');
@@ -26,6 +34,7 @@ const { parseRecaps } = require('./parsers/recap-parser');
 const { parseCost } = require('./parsers/cost-parser');
 const { parseFlowEvents, buildFlowSummary } = require('./parsers/flow-parser');
 const { parseConfig } = require('./parsers/config-parser');
+const { parseSkillMetrics } = require('./parsers/skill-metrics-parser');
 const { EVENT_TYPES } = require('./constants/event-types');
 const { resetCache } = require('./utils/jsonl-reader');
 const { createHelpOverlay } = require('./ui/help-overlay');
@@ -81,6 +90,20 @@ function createApp(options = {}) {
   const configTree = createConfigTreePanel(screen);
   configPanels.push(configTree);
 
+  // === Tab 4: Skill Metrics ===
+  const metricsPanels = [];
+
+  const metricsSummary = createMetricsSummaryPanel(screen);
+  metricsPanels.push(metricsSummary);
+
+  const metricsTable = createMetricsTablePanel(screen);
+  metricsPanels.push(metricsTable);
+
+  // === Tab 5: Tree ===
+  const treePanel = createTreePanel(screen);
+  const treePanels = treePanel.boxes;
+  let latestTreeData = null;
+
   // === Rename prompt ===
   const blessed = require('blessed');
   const renamePrompt = blessed.textbox({
@@ -121,6 +144,8 @@ function createApp(options = {}) {
     overviewPanels.forEach(p => { p.hidden = tab !== 1; });
     flowPanels.forEach(p => { p.hidden = tab !== 2; });
     configPanels.forEach(p => { p.hidden = tab !== 3; });
+    metricsPanels.forEach(p => { p.hidden = tab !== 4; });
+    treePanels.forEach(p => { p.hidden = tab !== 5; });
     screen.realloc();
     screen.render();
   }
@@ -160,6 +185,15 @@ function createApp(options = {}) {
       return;
     }
 
+    if (currentTab === 4) {
+      const metricsData = parseSkillMetrics();
+      updateMetricsSummaryPanel(metricsSummary, metricsData);
+      updateMetricsTablePanel(metricsTable, metricsData);
+      updateStatusBar(statusBar, config.POLL_INTERVAL_MS, 0, 0, currentTab);
+      screen.render();
+      return;
+    }
+
     activeSessions = findActiveSessions();
 
     if (activeSessions.length === 0) {
@@ -173,6 +207,9 @@ function createApp(options = {}) {
       } else if (currentTab === 2) {
         flowSummary.setContent('{center}{bold}No active sessions.{/bold}{/center}');
         flowTimeline.setContent('');
+      } else if (currentTab === 5) {
+        treePanel.treeBox.setContent('{center}{bold}No active sessions.{/bold}{/center}');
+        treePanel.detailBox.setContent('');
       }
       updateStatusBar(statusBar, config.POLL_INTERVAL_MS, 0, 0, currentTab);
       screen.render();
@@ -207,9 +244,12 @@ function createApp(options = {}) {
         skillPanel.setContent('');
         recapPanel.setContent('');
         costPanel.setContent('');
-      } else {
+      } else if (currentTab === 2) {
         flowSummary.setContent(`{center}${msg}{/center}`);
         flowTimeline.setContent('');
+      } else if (currentTab === 5) {
+        treePanel.treeBox.setContent(`{center}${msg}{/center}`);
+        treePanel.detailBox.setContent('');
       }
       screen.render();
       return;
@@ -264,13 +304,17 @@ function createApp(options = {}) {
       updateCostPanel(costPanel, cost);
       costPanel.top = skillTop + skillHeight + recapHeight;
       costPanel.bottom = undefined;
-    } else {
+    } else if (currentTab === 2) {
       // Flow tab
       allFlowEvents = parseFlowEvents(jsonlInfo.jsonlPath);
       const summary = buildFlowSummary(allFlowEvents);
       updateFlowSummaryPanel(flowSummary, summary);
       updateFlowTimelinePanel(flowTimeline, getFilteredFlowEvents(), true);
       updateFlowFilterBar(flowFilterBar, flowFilters);
+    } else if (currentTab === 5) {
+      // Tree tab
+      latestTreeData = loadTreeData(jsonlInfo.projectDir, session.sessionId, jsonlInfo.jsonlPath);
+      updateTreePanel(treePanel, latestTreeData);
     }
 
     updateStatusBar(statusBar, config.POLL_INTERVAL_MS, activeSessions.length, currentSessionIdx, currentTab);
@@ -337,10 +381,27 @@ function createApp(options = {}) {
     refresh();
   });
 
+  screen.key(['4'], () => {
+    if (helpVisible) return;
+    showTab(4);
+    refresh();
+  });
+
+  screen.key(['5'], () => {
+    if (helpVisible) return;
+    showTab(5);
+    refresh();
+  });
+
   screen.key(['up'], () => {
     if (helpVisible) { helpOverlay.scroll(-3); screen.render(); return; }
     if (currentTab === 2) { flowTimeline.scroll(-3); screen.render(); return; }
     if (currentTab === 3) { configTree.scroll(-3); screen.render(); return; }
+    if (currentTab === 4) { metricsTable.scroll(-3); screen.render(); return; }
+    if (currentTab === 5) {
+      if (latestTreeData) { moveTreeCursor(treePanel, -1, latestTreeData); screen.render(); }
+      return;
+    }
     if (activeSessions.length > 1) {
       currentSessionIdx = (currentSessionIdx - 1 + activeSessions.length) % activeSessions.length;
       resetCache();
@@ -352,6 +413,11 @@ function createApp(options = {}) {
     if (helpVisible) { helpOverlay.scroll(3); screen.render(); return; }
     if (currentTab === 2) { flowTimeline.scroll(3); screen.render(); return; }
     if (currentTab === 3) { configTree.scroll(3); screen.render(); return; }
+    if (currentTab === 4) { metricsTable.scroll(3); screen.render(); return; }
+    if (currentTab === 5) {
+      if (latestTreeData) { moveTreeCursor(treePanel, 1, latestTreeData); screen.render(); }
+      return;
+    }
     if (activeSessions.length > 1) {
       currentSessionIdx = (currentSessionIdx + 1) % activeSessions.length;
       resetCache();
@@ -365,6 +431,34 @@ function createApp(options = {}) {
   screen.key(['m'], () => { if (!helpVisible && currentTab === 2) toggleFilter('memory'); });
   screen.key(['s'], () => { if (!helpVisible && currentTab === 2) toggleFilter('skill'); });
   screen.key(['u'], () => { if (!helpVisible && currentTab === 2) toggleFilter('user'); });
+
+  // Tree tab keys
+  screen.key(['a'], () => {
+    if (helpVisible || renameActive) return;
+    if (currentTab !== 5 || !latestTreeData) return;
+    toggleTreeMode(treePanel, latestTreeData);
+    screen.render();
+  });
+
+  screen.key(['['], () => {
+    if (helpVisible || renameActive) return;
+    if (currentTab !== 5) return;
+    if (activeSessions.length > 1) {
+      currentSessionIdx = (currentSessionIdx - 1 + activeSessions.length) % activeSessions.length;
+      resetCache();
+      refresh();
+    }
+  });
+
+  screen.key([']'], () => {
+    if (helpVisible || renameActive) return;
+    if (currentTab !== 5) return;
+    if (activeSessions.length > 1) {
+      currentSessionIdx = (currentSessionIdx + 1) % activeSessions.length;
+      resetCache();
+      refresh();
+    }
+  });
 
   // Rename session
   screen.key(['n'], () => {
