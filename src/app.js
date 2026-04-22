@@ -394,10 +394,10 @@ function createApp(options = {}) {
   });
 
   screen.key(['up'], () => {
-    if (helpVisible) { helpOverlay.scroll(-3); screen.render(); return; }
-    if (currentTab === 2) { flowTimeline.scroll(-3); screen.render(); return; }
-    if (currentTab === 3) { configTree.scroll(-3); screen.render(); return; }
-    if (currentTab === 4) { metricsTable.scroll(-3); screen.render(); return; }
+    if (helpVisible) { helpOverlay.scroll(-1); screen.render(); return; }
+    if (currentTab === 2) { flowTimeline.scroll(-1); screen.render(); return; }
+    if (currentTab === 3) { configTree.scroll(-1); screen.render(); return; }
+    if (currentTab === 4) { metricsTable.scroll(-1); screen.render(); return; }
     if (currentTab === 5) {
       if (latestTreeData) { moveTreeCursor(treePanel, -1, latestTreeData); screen.render(); }
       return;
@@ -410,10 +410,10 @@ function createApp(options = {}) {
   });
 
   screen.key(['down'], () => {
-    if (helpVisible) { helpOverlay.scroll(3); screen.render(); return; }
-    if (currentTab === 2) { flowTimeline.scroll(3); screen.render(); return; }
-    if (currentTab === 3) { configTree.scroll(3); screen.render(); return; }
-    if (currentTab === 4) { metricsTable.scroll(3); screen.render(); return; }
+    if (helpVisible) { helpOverlay.scroll(1); screen.render(); return; }
+    if (currentTab === 2) { flowTimeline.scroll(1); screen.render(); return; }
+    if (currentTab === 3) { configTree.scroll(1); screen.render(); return; }
+    if (currentTab === 4) { metricsTable.scroll(1); screen.render(); return; }
     if (currentTab === 5) {
       if (latestTreeData) { moveTreeCursor(treePanel, 1, latestTreeData); screen.render(); }
       return;
@@ -424,6 +424,40 @@ function createApp(options = {}) {
       refresh();
     }
   });
+
+  // 페이지 단위 스크롤: 현재 탭의 주 스크롤 영역에 적용
+  function scrollCurrentPanel(delta) {
+    if (helpVisible) return helpOverlay.scroll(delta);
+    if (currentTab === 2) return flowTimeline.scroll(delta);
+    if (currentTab === 3) return configTree.scroll(delta);
+    if (currentTab === 4) return metricsTable.scroll(delta);
+    if (currentTab === 5) return treePanel.treeBox.scroll(delta);
+  }
+
+  function setScrollToEdge(top) {
+    if (helpVisible) { helpOverlay.setScrollPerc(top ? 0 : 100); return; }
+    if (currentTab === 2) { flowTimeline.setScrollPerc(top ? 0 : 100); return; }
+    if (currentTab === 3) { configTree.setScrollPerc(top ? 0 : 100); return; }
+    if (currentTab === 4) { metricsTable.setScrollPerc(top ? 0 : 100); return; }
+    if (currentTab === 5) { treePanel.treeBox.setScrollPerc(top ? 0 : 100); return; }
+  }
+
+  function pageSize() {
+    // 현재 탭 활성 박스의 내부 높이 기반 (마지막 행 겹침 방지로 -2)
+    let h = 20;
+    if (helpVisible) h = helpOverlay.height;
+    else if (currentTab === 2) h = flowTimeline.height;
+    else if (currentTab === 3) h = configTree.height;
+    else if (currentTab === 4) h = metricsTable.height;
+    else if (currentTab === 5) h = treePanel.treeBox.height;
+    const n = typeof h === 'number' ? h : 20;
+    return Math.max(3, n - 2);
+  }
+
+  screen.key(['pageup'], () => { scrollCurrentPanel(-pageSize()); screen.render(); });
+  screen.key(['pagedown'], () => { scrollCurrentPanel(pageSize()); screen.render(); });
+  screen.key(['home'], () => { setScrollToEdge(true); screen.render(); });
+  screen.key(['end'], () => { setScrollToEdge(false); screen.render(); });
 
   // Flow filter keys (only active on tab 2, not during help)
   screen.key(['h'], () => { if (!helpVisible && currentTab === 2) toggleFilter('hook'); });
