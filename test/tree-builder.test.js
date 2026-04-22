@@ -63,6 +63,93 @@ test('collectAgentToolUses handles non-assistant entries', () => {
   assert.strictEqual(map.size, 0);
 });
 
+const { buildTree } = require('../src/parsers/tree-builder');
+
+test('buildTree links subagent via parentToolUseID', () => {
+  const mainEntries = [
+    { type: 'assistant', timestamp: '2026-04-22T10:00:00Z', message: {
+      content: [
+        { type: 'tool_use', id: 'tu_A', name: 'Agent', input: { description: 'A desc', subagent_type: 'Explore' } },
+        { type: 'tool_use', id: 'tu_B', name: 'Agent', input: { description: 'B desc', subagent_type: 'code-reviewer' } },
+      ],
+    }},
+  ];
+  const subagents = [
+    { id: 'a1', type: 'Explore', description: 'A desc', parentToolUseID: 'tu_A',
+      isRunning: false, startTime: '2026-04-22T10:00:01Z', endTime: '2026-04-22T10:00:30Z',
+      elapsedMs: 29000, tokensIn: 100, tokensOut: 50, tools: { Read: 3 },
+      diagnostics: { errors: [], deniedCount: 0, lastActivity: '', repeatPattern: null }, model: 'sonnet' },
+    { id: 'a2', type: 'code-reviewer', description: 'B desc', parentToolUseID: 'tu_B',
+      isRunning: true, startTime: '2026-04-22T10:01:00Z', endTime: null,
+      elapsedMs: 60000, tokensIn: 200, tokensOut: 80, tools: { Grep: 5 },
+      diagnostics: { errors: [], deniedCount: 0, lastActivity: '', repeatPattern: null }, model: 'haiku' },
+  ];
+  const mainEntriesBySubagent = new Map();
+
+  const tree = buildTree({ sessionId: 'SESS', mainEntries, subagents, mainEntriesBySubagent });
+  assert.strictEqual(tree.root.id, 'SESS');
+  assert.strictEqual(tree.root.kind, 'session');
+  assert.strictEqual(tree.root.children.length, 2);
+  assert.strictEqual(tree.root.children[0].id, 'a1');
+  assert.strictEqual(tree.root.children[0].depth, 1);
+  assert.strictEqual(tree.root.children[1].id, 'a2');
+  assert.strictEqual(tree.byId.get('a1').parentId, 'SESS');
+  assert.strictEqual(tree.flatten.length, 3);
+  assert.strictEqual(tree.flatten[0].kind, 'session');
+  assert.strictEqual(tree.flatten[1].id, 'a1');
+});
+
+test('buildTree attaches orphan subagents to root', () => {
+  const mainEntries = [];
+  const subagents = [
+    { id: 'orph', type: 'Explore', description: 'x', parentToolUseID: 'tu_MISSING',
+      isRunning: false, startTime: '2026-04-22T10:00:00Z', endTime: '2026-04-22T10:00:30Z',
+      elapsedMs: 30000, tokensIn: 0, tokensOut: 0, tools: {},
+      diagnostics: { errors: [], deniedCount: 0, lastActivity: '', repeatPattern: null }, model: null },
+  ];
+  const tree = buildTree({ sessionId: 'SESS', mainEntries, subagents, mainEntriesBySubagent: new Map() });
+  assert.strictEqual(tree.root.children.length, 1);
+  assert.strictEqual(tree.root.children[0].id, 'orph');
+  assert.strictEqual(tree.root.children[0].parentId, 'SESS');
+});
+
+test('buildTree nests subagent spawned by another subagent', () => {
+  const mainEntries = [
+    { type: 'assistant', timestamp: '2026-04-22T10:00:00Z', message: {
+      content: [
+        { type: 'tool_use', id: 'tu_parent', name: 'Agent', input: { description: 'parent', subagent_type: 'feature-dev' } },
+      ],
+    }},
+  ];
+  const parentAgentEntries = [
+    { type: 'assistant', timestamp: '2026-04-22T10:00:10Z', message: {
+      content: [
+        { type: 'tool_use', id: 'tu_child', name: 'Agent', input: { description: 'child', subagent_type: 'Explore' } },
+      ],
+    }},
+  ];
+  const subagents = [
+    { id: 'par', type: 'feature-dev', description: 'parent', parentToolUseID: 'tu_parent',
+      isRunning: false, startTime: '2026-04-22T10:00:01Z', endTime: '2026-04-22T10:02:00Z',
+      elapsedMs: 120000, tokensIn: 500, tokensOut: 200, tools: { Read: 10 },
+      diagnostics: { errors: [], deniedCount: 0, lastActivity: '', repeatPattern: null }, model: 'opus' },
+    { id: 'chi', type: 'Explore', description: 'child', parentToolUseID: 'tu_child',
+      isRunning: false, startTime: '2026-04-22T10:00:15Z', endTime: '2026-04-22T10:00:45Z',
+      elapsedMs: 30000, tokensIn: 50, tokensOut: 30, tools: { Grep: 3 },
+      diagnostics: { errors: [], deniedCount: 0, lastActivity: '', repeatPattern: null }, model: 'sonnet' },
+  ];
+  const mainEntriesBySubagent = new Map([['par', parentAgentEntries]]);
+  const tree = buildTree({ sessionId: 'SESS', mainEntries, subagents, mainEntriesBySubagent });
+
+  assert.strictEqual(tree.root.children.length, 1);
+  assert.strictEqual(tree.root.children[0].id, 'par');
+  assert.strictEqual(tree.root.children[0].children.length, 1);
+  assert.strictEqual(tree.root.children[0].children[0].id, 'chi');
+  assert.strictEqual(tree.root.children[0].children[0].depth, 2);
+  assert.strictEqual(tree.flatten.length, 3);
+  assert.strictEqual(tree.flatten[2].id, 'chi');
+});
+
 process.on('beforeExit', () => {
   console.log(`\n${passed} passed, ${failed} failed`);
   if (failed > 0) process.exit(1);

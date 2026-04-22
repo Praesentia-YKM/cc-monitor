@@ -20,4 +20,106 @@ function collectAgentToolUses(entries) {
   return map;
 }
 
-module.exports = { collectAgentToolUses };
+function makeNode(kind, id, opts = {}) {
+  return {
+    id,
+    kind,
+    agentType: opts.agentType || 'main',
+    description: opts.description || '',
+    parentId: opts.parentId || null,
+    toolUseId: opts.toolUseId || null,
+    depth: opts.depth || 0,
+    isRunning: opts.isRunning !== undefined ? opts.isRunning : false,
+    startTime: opts.startTime || null,
+    endTime: opts.endTime || null,
+    elapsedMs: opts.elapsedMs || 0,
+    model: opts.model || null,
+    tokensIn: opts.tokensIn || 0,
+    tokensOut: opts.tokensOut || 0,
+    tools: opts.tools || {},
+    diagnostics: opts.diagnostics || { errors: [], deniedCount: 0, lastActivity: '', repeatPattern: null },
+    children: [],
+  };
+}
+
+function buildTree({ sessionId, mainEntries, subagents, mainEntriesBySubagent }) {
+  const root = makeNode('session', sessionId, { agentType: 'main', depth: 0 });
+
+  const toolUseMetaFromMain = collectAgentToolUses(mainEntries);
+
+  const toolUseIdToParentSubagent = new Map();
+  if (mainEntriesBySubagent) {
+    for (const [subagentId, entries] of mainEntriesBySubagent.entries()) {
+      const m = collectAgentToolUses(entries);
+      for (const toolId of m.keys()) {
+        toolUseIdToParentSubagent.set(toolId, subagentId);
+      }
+    }
+  }
+
+  const byId = new Map();
+  byId.set(root.id, root);
+
+  const agentNodes = subagents.map(sa => {
+    const node = makeNode('agent', sa.id, {
+      agentType: sa.type || 'unknown',
+      description: sa.description || '',
+      toolUseId: sa.parentToolUseID || null,
+      isRunning: !!sa.isRunning,
+      startTime: sa.startTime || null,
+      endTime: sa.endTime || null,
+      elapsedMs: sa.elapsedMs || 0,
+      model: sa.model || null,
+      tokensIn: sa.tokensIn || 0,
+      tokensOut: sa.tokensOut || 0,
+      tools: sa.tools || {},
+      diagnostics: sa.diagnostics || { errors: [], deniedCount: 0, lastActivity: '', repeatPattern: null },
+    });
+    byId.set(node.id, node);
+    return node;
+  });
+
+  for (const node of agentNodes) {
+    const parentToolUseID = node.toolUseId;
+    let parent = null;
+
+    if (parentToolUseID) {
+      if (toolUseMetaFromMain.has(parentToolUseID)) {
+        parent = root;
+      } else if (toolUseIdToParentSubagent.has(parentToolUseID)) {
+        const parentSubId = toolUseIdToParentSubagent.get(parentToolUseID);
+        parent = byId.get(parentSubId) || null;
+      }
+    }
+
+    if (!parent) {
+      logger.log('debug', `tree: orphan subagent ${node.id} parentToolUseID=${parentToolUseID}, attach to root`);
+      parent = root;
+    }
+
+    node.parentId = parent.id;
+    node.depth = parent.depth + 1;
+    parent.children.push(node);
+  }
+
+  function sortChildren(n) {
+    n.children.sort((a, b) => {
+      const ta = a.startTime ? Date.parse(a.startTime) : 0;
+      const tb = b.startTime ? Date.parse(b.startTime) : 0;
+      return ta - tb;
+    });
+    n.children.forEach(sortChildren);
+  }
+  sortChildren(root);
+
+  const flatten = [];
+  function walk(n) {
+    flatten.push(n);
+    for (const c of n.children) walk(c);
+  }
+  walk(root);
+
+  return { root, byId, flatten };
+}
+
+module.exports = { collectAgentToolUses, buildTree };
