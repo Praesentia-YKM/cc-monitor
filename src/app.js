@@ -26,6 +26,9 @@ const {
 const { createTreePanel, updateTreePanel, moveCursor: moveTreeCursor, toggleMode: toggleTreeMode } = require('./ui/tree-panel');
 const { loadTreeData } = require('./parsers/tree-builder');
 
+const { createTeamsPanels, updateTeamsPanels } = require('./ui/teams-panel');
+const { buildTeamsMetrics } = require('./parsers/teams-metrics');
+
 const { findActiveSessions, findSessionJsonl } = require('./parsers/session-finder');
 const { parseSession, calcContextPercent, calcIdleTime, calcAge } = require('./parsers/session-parser');
 const { parseSubagents } = require('./parsers/subagent-parser');
@@ -104,6 +107,10 @@ function createApp(options = {}) {
   const treePanels = treePanel.boxes;
   let latestTreeData = null;
 
+  // === Tab 6: Teams ===
+  const teamsPanel = createTeamsPanels(screen);
+  const teamsPanels = teamsPanel.boxes;
+
   // === Rename prompt ===
   const blessed = require('blessed');
   const renamePrompt = blessed.textbox({
@@ -146,6 +153,7 @@ function createApp(options = {}) {
     configPanels.forEach(p => { p.hidden = tab !== 3; });
     metricsPanels.forEach(p => { p.hidden = tab !== 4; });
     treePanels.forEach(p => { p.hidden = tab !== 5; });
+    teamsPanels.forEach(p => { p.hidden = tab !== 6; });
     screen.realloc();
     screen.render();
   }
@@ -210,6 +218,11 @@ function createApp(options = {}) {
       } else if (currentTab === 5) {
         treePanel.treeBox.setContent('{center}{bold}No active sessions.{/bold}{/center}');
         treePanel.detailBox.setContent('');
+      } else if (currentTab === 6) {
+        teamsPanel.gantt.setContent('{center}{bold}No active sessions.{/bold}{/center}');
+        teamsPanel.flow.setContent('');
+        teamsPanel.load.setContent('');
+        teamsPanel.heat.setContent('');
       }
       updateStatusBar(statusBar, config.POLL_INTERVAL_MS, 0, 0, currentTab);
       screen.render();
@@ -250,6 +263,11 @@ function createApp(options = {}) {
       } else if (currentTab === 5) {
         treePanel.treeBox.setContent(`{center}${msg}{/center}`);
         treePanel.detailBox.setContent('');
+      } else if (currentTab === 6) {
+        teamsPanel.gantt.setContent(`{center}${msg}{/center}`);
+        teamsPanel.flow.setContent('');
+        teamsPanel.load.setContent('');
+        teamsPanel.heat.setContent('');
       }
       screen.render();
       return;
@@ -315,6 +333,11 @@ function createApp(options = {}) {
       // Tree tab
       latestTreeData = loadTreeData(jsonlInfo.projectDir, session.sessionId, jsonlInfo.jsonlPath);
       updateTreePanel(treePanel, latestTreeData);
+    } else if (currentTab === 6) {
+      // Teams tab — Tree 데이터를 재사용해 4개 서브패널에 렌더링
+      const treeData = loadTreeData(jsonlInfo.projectDir, session.sessionId, jsonlInfo.jsonlPath);
+      const metrics = buildTeamsMetrics(treeData);
+      updateTeamsPanels(teamsPanel, metrics);
     }
 
     updateStatusBar(statusBar, config.POLL_INTERVAL_MS, activeSessions.length, currentSessionIdx, currentTab);
@@ -393,6 +416,12 @@ function createApp(options = {}) {
     refresh();
   });
 
+  screen.key(['6'], () => {
+    if (helpVisible) return;
+    showTab(6);
+    refresh();
+  });
+
   screen.key(['up'], () => {
     if (helpVisible) { helpOverlay.scroll(-1); screen.render(); return; }
     if (currentTab === 2) { flowTimeline.scroll(-1); screen.render(); return; }
@@ -402,6 +431,7 @@ function createApp(options = {}) {
       if (latestTreeData) { moveTreeCursor(treePanel, -1, latestTreeData); screen.render(); }
       return;
     }
+    if (currentTab === 6) { teamsPanel.gantt.scroll(-1); screen.render(); return; }
     if (activeSessions.length > 1) {
       currentSessionIdx = (currentSessionIdx - 1 + activeSessions.length) % activeSessions.length;
       resetCache();
@@ -418,6 +448,7 @@ function createApp(options = {}) {
       if (latestTreeData) { moveTreeCursor(treePanel, 1, latestTreeData); screen.render(); }
       return;
     }
+    if (currentTab === 6) { teamsPanel.gantt.scroll(1); screen.render(); return; }
     if (activeSessions.length > 1) {
       currentSessionIdx = (currentSessionIdx + 1) % activeSessions.length;
       resetCache();
@@ -432,6 +463,7 @@ function createApp(options = {}) {
     if (currentTab === 3) return configTree.scroll(delta);
     if (currentTab === 4) return metricsTable.scroll(delta);
     if (currentTab === 5) return treePanel.treeBox.scroll(delta);
+    if (currentTab === 6) return teamsPanel.gantt.scroll(delta);
   }
 
   function setScrollToEdge(top) {
@@ -440,6 +472,7 @@ function createApp(options = {}) {
     if (currentTab === 3) { configTree.setScrollPerc(top ? 0 : 100); return; }
     if (currentTab === 4) { metricsTable.setScrollPerc(top ? 0 : 100); return; }
     if (currentTab === 5) { treePanel.treeBox.setScrollPerc(top ? 0 : 100); return; }
+    if (currentTab === 6) { teamsPanel.gantt.setScrollPerc(top ? 0 : 100); return; }
   }
 
   function pageSize() {
@@ -450,6 +483,7 @@ function createApp(options = {}) {
     else if (currentTab === 3) h = configTree.height;
     else if (currentTab === 4) h = metricsTable.height;
     else if (currentTab === 5) h = treePanel.treeBox.height;
+    else if (currentTab === 6) h = teamsPanel.gantt.height;
     const n = typeof h === 'number' ? h : 20;
     return Math.max(3, n - 2);
   }
@@ -476,7 +510,7 @@ function createApp(options = {}) {
 
   screen.key(['['], () => {
     if (helpVisible || renameActive) return;
-    if (currentTab !== 5) return;
+    if (currentTab !== 5 && currentTab !== 6) return;
     if (activeSessions.length > 1) {
       currentSessionIdx = (currentSessionIdx - 1 + activeSessions.length) % activeSessions.length;
       resetCache();
@@ -486,7 +520,7 @@ function createApp(options = {}) {
 
   screen.key([']'], () => {
     if (helpVisible || renameActive) return;
-    if (currentTab !== 5) return;
+    if (currentTab !== 5 && currentTab !== 6) return;
     if (activeSessions.length > 1) {
       currentSessionIdx = (currentSessionIdx + 1) % activeSessions.length;
       resetCache();

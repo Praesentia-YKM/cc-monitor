@@ -27,9 +27,10 @@ function updateStatusBar(bar, pollInterval, sessionCount, sessionIdx, currentTab
   const tab3 = tab === 3 ? '{bold}{white-bg}{black-fg} 3:Config {/black-fg}{/white-bg}{/bold}' : ' 3:Config ';
   const tab4 = tab === 4 ? '{bold}{white-bg}{black-fg} 4:Metrics {/black-fg}{/white-bg}{/bold}' : ' 4:Metrics ';
   const tab5 = tab === 5 ? '{bold}{white-bg}{black-fg} 5:Tree {/black-fg}{/white-bg}{/bold}' : ' 5:Tree ';
+  const tab6 = tab === 6 ? '{bold}{white-bg}{black-fg} 6:Teams {/black-fg}{/white-bg}{/bold}' : ' 6:Teams ';
 
   const sessionInfo = sessionCount > 1
-    ? (tab === 5
+    ? ((tab === 5 || tab === 6)
         ? `  Session ${sessionIdx + 1}/${sessionCount} [ [ / ] ]`
         : `  Session ${sessionIdx + 1}/${sessionCount} [\u2191\u2193]`)
     : '';
@@ -39,9 +40,11 @@ function updateStatusBar(bar, pollInterval, sessionCount, sessionIdx, currentTab
     filterHint = '  {bold}h{/bold}ook {bold}f{/bold}ilter:rules {bold}m{/bold}em {bold}s{/bold}kill {bold}u{/bold}ser';
   } else if (tab === 5) {
     filterHint = '  {bold}\u2191\u2193{/bold}:select  {bold}a{/bold}:all-toggle';
+  } else if (tab === 6) {
+    filterHint = '  {bold}\u2191\u2193{/bold}:scroll-gantt  {bold}[ ]{/bold}:session';
   }
 
-  bar.setContent(`${tab1}${tab2}${tab3}${tab4}${tab5}  {bold}q{/bold}:quit {bold}r{/bold}:refresh {bold}n{/bold}:rename {bold}?{/bold}:help ${seconds}s${sessionInfo}${filterHint}`);
+  bar.setContent(`${tab1}${tab2}${tab3}${tab4}${tab5}${tab6}  {bold}q{/bold}:quit {bold}r{/bold}:refresh {bold}n{/bold}:rename {bold}?{/bold}:help ${seconds}s${sessionInfo}${filterHint}`);
 }
 
 module.exports = { createStatusBar, updateStatusBar };
