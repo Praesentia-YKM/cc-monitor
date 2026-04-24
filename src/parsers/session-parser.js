@@ -55,8 +55,8 @@ function parseSession(jsonlPath) {
 }
 
 function calcContextPercent(sessionData) {
-  const model = sessionData.model || 'default';
-  const maxCtx = config.MODEL_MAX_CONTEXT[model] || config.MODEL_MAX_CONTEXT.default;
+  const { getMaxContext } = require('../utils/format-model');
+  const maxCtx = getMaxContext(sessionData.model);
   const ctxSize = sessionData.lastContextSize;
   if (ctxSize <= 0 || maxCtx <= 0) return 0;
   return Math.min(Math.round((ctxSize / maxCtx) * 100), 100);

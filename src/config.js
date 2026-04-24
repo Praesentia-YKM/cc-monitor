@@ -13,6 +13,7 @@ module.exports = {
   POLL_INTERVAL_MS: 2000,
   CONTEXT_WARN_THRESHOLD: 0.8,
 
+  // @deprecated — use getMaxContext() in utils/format-model.js. Kept for compat.
   MODEL_MAX_CONTEXT: {
     'claude-opus-4-6': 200000,
     'claude-sonnet-4-6': 200000,
