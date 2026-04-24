@@ -12,6 +12,7 @@ module.exports = {
 
   POLL_INTERVAL_MS: 2000,
   CONTEXT_WARN_THRESHOLD: 0.8,
+  MAX_ACCUMULATED_EVENTS: parseInt(process.env.CC_MONITOR_MAX_EVENTS, 10) || 20000,
 
   // @deprecated — use getMaxContext() in utils/format-model.js. Kept for compat.
   MODEL_MAX_CONTEXT: {

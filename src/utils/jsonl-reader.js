@@ -1,7 +1,7 @@
 const fs = require('fs');
+const config = require('../config');
 const logger = require('./logger');
 
-const MAX_ACCUMULATED = 5000;
 const lineCache = new Map();
 const offsetCache = new Map();
 
@@ -64,8 +64,9 @@ function readJsonlIncremental(filePath) {
 
   cached.accumulated = cached.accumulated.concat(newEntries);
 
-  if (cached.accumulated.length > MAX_ACCUMULATED) {
-    cached.accumulated = cached.accumulated.slice(-MAX_ACCUMULATED);
+  const maxAccumulated = config.MAX_ACCUMULATED_EVENTS;
+  if (cached.accumulated.length > maxAccumulated) {
+    cached.accumulated = cached.accumulated.slice(-maxAccumulated);
   }
 
   cached.lastLine = cached.lastLine + newEntries.length;
