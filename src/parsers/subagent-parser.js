@@ -130,7 +130,11 @@ function parseSubagents(projectDir, sessionId) {
             const lastTime = parseTimestamp(lastEntry.timestamp).getTime();
             const idleMs = Date.now() - lastTime;
 
-            if (!hasToolUse && idleMs > 30 * 1000) {
+            // tool_use로 끝난 경우 tool_result 대기 중일 수 있어 더 긴 threshold,
+            // text로 끝난 경우 응답 완료 직후이므로 짧은 threshold.
+            // 이전엔 tool_use 분기에 종료 판정이 없어 좀비 running이 누적됨.
+            const idleThresholdMs = hasToolUse ? 10 * 60 * 1000 : 30 * 1000;
+            if (idleMs > idleThresholdMs) {
               isRunning = false;
               endTime = lastEntry.timestamp;
             }
