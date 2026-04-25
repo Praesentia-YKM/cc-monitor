@@ -63,8 +63,8 @@ function findSessionJsonl(session) {
         return { jsonlPath, projectDir: path.join(projectsDir, project), projectName: project };
       }
     }
-  } catch {
-    // ignore
+  } catch (e) {
+    logger.log('warn', 'findSessionJsonl failed', e.message);
   }
   return null;
 }

@@ -123,6 +123,12 @@ function parseFlowEvents(jsonlPath) {
           hookEvent: 'SessionStart',
         });
       }
+
+      const handled = ['hook_success', 'hook_cancelled', 'nested_memory', 'skill_listing', 'hook_additional_context'];
+      if (att.type && !handled.includes(att.type)) {
+        const { recordSchemaMiss } = require('../utils/schema-guard');
+        recordSchemaMiss('flow-parser.attachment', { type: att.type });
+      }
     }
   }
 

@@ -195,7 +195,8 @@ function parseSubagents(projectDir, sessionId) {
     });
 
     return agents;
-  } catch {
+  } catch (e) {
+    logger.log('warn', `parseSubagents failed for ${sessionId}`, e.message);
     return [];
   }
 }
