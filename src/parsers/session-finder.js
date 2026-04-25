@@ -16,6 +16,7 @@ function isProcessAlive(pid) {
 }
 
 function findActiveSessions() {
+  const { verifyProcessIdentity } = require('../utils/process-info');
   const sessionsDir = config.SESSIONS_DIR;
   try {
     const files = fs.readdirSync(sessionsDir).filter(f => f.endsWith('.json'));
@@ -25,12 +26,19 @@ function findActiveSessions() {
       const data = readJsonFile(path.join(sessionsDir, file));
       if (!data || !data.pid) continue;
 
-      if (isProcessAlive(data.pid)) {
-        sessions.push(data);
+      if (!isProcessAlive(data.pid)) continue;
+
+      if (!verifyProcessIdentity(data.pid, data.startedAt)) {
+        logger.log('warn', `PID ${data.pid} alive but started_at mismatch — likely PID reuse, skipping`, {
+          sessionId: data.sessionId,
+          expected: data.startedAt,
+        });
+        continue;
       }
+
+      sessions.push(data);
     }
 
-    // cwd 기준 그루핑 → 그룹 내 최신순
     sessions.sort((a, b) => {
       const cwdA = (a.cwd || '').toLowerCase();
       const cwdB = (b.cwd || '').toLowerCase();
