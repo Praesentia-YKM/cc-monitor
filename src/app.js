@@ -112,7 +112,7 @@ function createApp(options = {}) {
   const teamsPanels = teamsPanel.boxes;
 
   // === Rename prompt ===
-  const blessed = require('blessed');
+  const blessed = require('neo-blessed');
   const renamePrompt = blessed.textbox({
     parent: screen,
     top: 'center',

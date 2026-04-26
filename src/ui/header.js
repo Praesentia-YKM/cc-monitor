@@ -1,4 +1,4 @@
-const blessed = require('blessed');
+const blessed = require('neo-blessed');
 const { createSection } = require('./layout');
 const { formatDuration, formatTokenCount, formatTime } = require('../utils/time-format');
 const { contextColor, contextBar } = require('../utils/colors');
