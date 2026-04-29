@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { readJsonFile, readJsonlFile } = require('../utils/jsonl-reader');
+const { readJsonFile, readJsonlIncremental } = require('../utils/jsonl-reader');
 const { parseTimestamp } = require('../utils/time-format');
 const { countTools } = require('../utils/tool-counter');
 const logger = require('../utils/logger');
@@ -28,6 +28,7 @@ function extractDiagnostics(entries) {
   const errors = [];
   let deniedCount = 0;
   let lastActivity = '';
+  let lastActivityText = '';
   const toolSequence = [];
 
   for (const entry of entries) {
@@ -35,12 +36,16 @@ function extractDiagnostics(entries) {
       const content = entry.message.content;
       if (!Array.isArray(content)) continue;
 
+      if (entry.timestamp) {
+        lastActivity = entry.timestamp;
+      }
+
       for (const block of content) {
         if (block.type === 'tool_use' && block.name) {
           toolSequence.push(block.name);
         }
         if (block.type === 'text' && block.text) {
-          lastActivity = block.text;
+          lastActivityText = block.text;
         }
         if (block.type === 'tool_result' && block.is_error) {
           const errText = extractErrorText(block);
@@ -69,7 +74,7 @@ function extractDiagnostics(entries) {
 
   const repeatPattern = detectRepeatPattern(toolSequence);
 
-  return { errors, deniedCount, lastActivity, repeatPattern };
+  return { errors, deniedCount, lastActivity, lastActivityText, repeatPattern };
 }
 
 function detectRepeatPattern(sequence) {
@@ -111,10 +116,10 @@ function parseSubagents(projectDir, sessionId) {
       let tokensOut = 0;
       let parentToolUseID = null;
       const tools = {};
-      let diagnostics = { errors: [], deniedCount: 0, lastActivity: '', repeatPattern: null };
+      let diagnostics = { errors: [], deniedCount: 0, lastActivity: '', lastActivityText: '', repeatPattern: null };
 
       if (fs.existsSync(jsonlPath)) {
-        const { entries } = readJsonlFile(jsonlPath);
+        const entries = readJsonlIncremental(jsonlPath);
         if (entries.length > 0) {
           startTime = entries[0].timestamp;
           parentToolUseID = entries[0].parentToolUseID || null;

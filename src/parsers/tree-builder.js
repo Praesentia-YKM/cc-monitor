@@ -1,8 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 const logger = require('../utils/logger');
-const { readJsonlFile } = require('../utils/jsonl-reader');
+const { readJsonlIncremental } = require('../utils/jsonl-reader');
 const { parseSubagents } = require('./subagent-parser');
+const { analyzeHealth } = require('./health-analyzer');
+const config = require('../config');
 
 function collectAgentToolUses(entries) {
   const map = new Map();
@@ -41,7 +43,7 @@ function makeNode(kind, id, opts = {}) {
     tokensIn: opts.tokensIn || 0,
     tokensOut: opts.tokensOut || 0,
     tools: opts.tools || {},
-    diagnostics: opts.diagnostics || { errors: [], deniedCount: 0, lastActivity: '', repeatPattern: null },
+    diagnostics: opts.diagnostics || { errors: [], deniedCount: 0, lastActivity: '', lastActivityText: '', repeatPattern: null },
     children: [],
   };
 }
@@ -77,8 +79,9 @@ function buildTree({ sessionId, mainEntries, subagents, mainEntriesBySubagent })
       tokensIn: sa.tokensIn || 0,
       tokensOut: sa.tokensOut || 0,
       tools: sa.tools || {},
-      diagnostics: sa.diagnostics || { errors: [], deniedCount: 0, lastActivity: '', repeatPattern: null },
+      diagnostics: sa.diagnostics || { errors: [], deniedCount: 0, lastActivity: '', lastActivityText: '', repeatPattern: null },
     });
+    node._subagent = sa;
     byId.set(node.id, node);
     return node;
   });
@@ -123,28 +126,78 @@ function buildTree({ sessionId, mainEntries, subagents, mainEntriesBySubagent })
   }
   walk(root);
 
+  const now = Date.now();
+  for (const node of agentNodes) {
+    node.health = analyzeHealth(node._subagent, now, config.healthAnalyzer);
+  }
+
   return { root, byId, flatten };
 }
 
+const treeCache = new Map();
+
+function getTreeFingerprint(mainJsonlPath, subagentsDir) {
+  let fp = '';
+  try {
+    if (mainJsonlPath && fs.existsSync(mainJsonlPath)) {
+      fp += `m:${fs.statSync(mainJsonlPath).mtimeMs}`;
+    }
+    if (fs.existsSync(subagentsDir)) {
+      const files = fs.readdirSync(subagentsDir).filter(f => f.endsWith('.jsonl')).sort();
+      for (const f of files) {
+        fp += `|${f}:${fs.statSync(path.join(subagentsDir, f)).mtimeMs}`;
+      }
+    }
+  } catch (e) {
+    return null;
+  }
+  return fp;
+}
+
+function refreshHealth(treeData) {
+  const now = Date.now();
+  for (const node of treeData.flatten) {
+    if (node._subagent) {
+      node.health = analyzeHealth(node._subagent, now, config.healthAnalyzer);
+    }
+  }
+  return treeData;
+}
+
 function loadTreeData(projectDir, sessionId, mainJsonlPath) {
+  const subagentsDir = path.join(projectDir, sessionId, 'subagents');
+  const fp = getTreeFingerprint(mainJsonlPath, subagentsDir);
+  const cacheKey = `${sessionId}|${mainJsonlPath}`;
+  const cached = treeCache.get(cacheKey);
+  if (cached && fp !== null && cached.fp === fp) {
+    return refreshHealth(cached.treeData);
+  }
+
   const mainEntries = mainJsonlPath && fs.existsSync(mainJsonlPath)
-    ? readJsonlFile(mainJsonlPath).entries
+    ? readJsonlIncremental(mainJsonlPath)
     : [];
 
   const subagents = parseSubagents(projectDir, sessionId);
 
   const mainEntriesBySubagent = new Map();
-  const subagentsDir = path.join(projectDir, sessionId, 'subagents');
   if (fs.existsSync(subagentsDir)) {
     for (const sa of subagents) {
       const jsonl = path.join(subagentsDir, `${sa.id}.jsonl`);
       if (fs.existsSync(jsonl)) {
-        mainEntriesBySubagent.set(sa.id, readJsonlFile(jsonl).entries);
+        mainEntriesBySubagent.set(sa.id, readJsonlIncremental(jsonl));
       }
     }
   }
 
-  return buildTree({ sessionId, mainEntries, subagents, mainEntriesBySubagent });
+  const treeData = buildTree({ sessionId, mainEntries, subagents, mainEntriesBySubagent });
+  if (fp !== null) {
+    treeCache.set(cacheKey, { treeData, fp });
+  }
+  return treeData;
 }
 
-module.exports = { collectAgentToolUses, buildTree, loadTreeData };
+function resetTreeCache() {
+  treeCache.clear();
+}
+
+module.exports = { collectAgentToolUses, buildTree, loadTreeData, resetTreeCache };

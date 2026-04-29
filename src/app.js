@@ -3,6 +3,8 @@ const { createScreen } = require('./ui/layout');
 const { createHeader, updateHeader } = require('./ui/header');
 const { createToolsPanel, updateToolsPanel } = require('./ui/tools-panel');
 const { createSubagentsPanel, updateSubagentsPanel } = require('./ui/subagents-panel');
+const { createHealthPanel } = require('./ui/overview-health-panel');
+const { analyzeHealth } = require('./parsers/health-analyzer');
 const { createSkillPanel, updateSkillPanel } = require('./ui/skill-panel');
 const { createRecapPanel, updateRecapPanel } = require('./ui/recap-panel');
 const { createCostPanel, updateCostPanel } = require('./ui/cost-panel');
@@ -62,6 +64,15 @@ function createApp(options = {}) {
 
   const subagentsPanel = createSubagentsPanel(screen, 12);
   overviewPanels.push(subagentsPanel);
+
+  const HEALTH_PANEL_HEIGHT = 6;
+  const healthPanel = createHealthPanel(screen, {
+    top: 12,
+    left: 0,
+    width: '100%',
+    height: HEALTH_PANEL_HEIGHT,
+  });
+  overviewPanels.push(healthPanel.box);
 
   const skillPanel = createSkillPanel(screen, 18);
   overviewPanels.push(skillPanel);
@@ -144,9 +155,33 @@ function createApp(options = {}) {
   let currentSessionIdx = 0;
   let activeSessions = [];
   let allFlowEvents = [];
+  let lastRefreshAt = 0;
+  const REFRESH_THROTTLE_MS = 800;
   const flowFilters = new Set(['hook', 'rule', 'memory', 'skill', 'user']);
 
+  function fastClear() {
+    const lines = screen.lines;
+    const olines = screen.olines;
+    const dattr = screen.dattr;
+    for (let y = 0; y < lines.length; y++) {
+      const line = lines[y];
+      const oline = olines[y];
+      for (let x = 0; x < line.length; x++) {
+        line[x][0] = dattr;
+        line[x][1] = ' ';
+        oline[x][0] = dattr;
+        oline[x][1] = ' ';
+      }
+      line.dirty = true;
+    }
+    screen.program.clear();
+  }
+
   function showTab(tab) {
+    if (currentTab === tab) {
+      screen.render();
+      return;
+    }
     currentTab = tab;
     overviewPanels.forEach(p => { p.hidden = tab !== 1; });
     flowPanels.forEach(p => { p.hidden = tab !== 2; });
@@ -154,8 +189,8 @@ function createApp(options = {}) {
     metricsPanels.forEach(p => { p.hidden = tab !== 4; });
     treePanels.forEach(p => { p.hidden = tab !== 5; });
     teamsPanels.forEach(p => { p.hidden = tab !== 6; });
-    screen.realloc();
-    screen.render();
+    fastClear();
+    refresh();
   }
 
   // Start with tab 1
@@ -184,6 +219,7 @@ function createApp(options = {}) {
   }
 
   function refresh() {
+    lastRefreshAt = Date.now();
     if (currentTab === 3) {
       const configData = parseConfig();
       updateConfigSummaryPanel(configSummary, configData);
@@ -209,6 +245,7 @@ function createApp(options = {}) {
         header.box.setContent('{center}{bold}No active Claude Code sessions found.{/bold}{/center}\n\n{center}{gray-fg}Start a session and this monitor will detect it automatically.{/gray-fg}{/center}');
         toolsPanel.setContent('');
         subagentsPanel.setContent('');
+        healthPanel.box.setContent('');
         skillPanel.setContent('');
         recapPanel.setContent('');
         costPanel.setContent('');
@@ -254,6 +291,7 @@ function createApp(options = {}) {
         header.box.setContent(`{center}${msg}{/center}`);
         toolsPanel.setContent('');
         subagentsPanel.setContent('');
+        healthPanel.box.setContent('');
         skillPanel.setContent('');
         recapPanel.setContent('');
         costPanel.setContent('');
@@ -284,9 +322,16 @@ function createApp(options = {}) {
       updateToolsPanel(toolsPanel, sessionData.tools);
 
       const agents = parseSubagents(jsonlInfo.projectDir, session.sessionId);
+      const nowTs = Date.now();
+      for (const sa of agents) {
+        sa.health = analyzeHealth(sa, nowTs, config.healthAnalyzer);
+      }
       const subLines = updateSubagentsPanel(subagentsPanel, agents) || 1;
       const subHeight = Math.max(4, Math.min(subLines + 2, 16));
       subagentsPanel.height = subHeight;
+
+      healthPanel.box.top = 12 + subHeight;
+      healthPanel.render(agents);
 
       const conversations = parseConversation(jsonlInfo.jsonlPath);
       const convLines = updateSkillPanel(skillPanel, conversations) || 1;
@@ -297,9 +342,9 @@ function createApp(options = {}) {
       const recapNeed = recapLines + 2;
 
       // 반응형 레이아웃: 터미널 높이에서 고정 영역을 빼고 conversation+recap에 분배
-      // 고정: header(7) + tools(5) + subagents(dyn) + cost(3) + statusbar(1) = 16 + subH
+      // 고정: header(7) + tools(5) + subagents(dyn) + health(6) + cost(3) + statusbar(1) = 22 + subH
       const totalH = screen.height || 40;
-      const fixedH = 7 + 5 + subHeight + 3 + 1;
+      const fixedH = 7 + 5 + subHeight + HEALTH_PANEL_HEIGHT + 3 + 1;
       const available = Math.max(6, totalH - fixedH);
 
       let skillHeight, recapHeight;
@@ -312,7 +357,7 @@ function createApp(options = {}) {
         recapHeight = Math.max(3, available - skillHeight);
       }
 
-      const skillTop = 12 + subHeight;
+      const skillTop = 12 + subHeight + HEALTH_PANEL_HEIGHT;
       skillPanel.top = skillTop;
       skillPanel.height = skillHeight;
       recapPanel.top = skillTop + skillHeight;
@@ -330,11 +375,9 @@ function createApp(options = {}) {
       updateFlowTimelinePanel(flowTimeline, getFilteredFlowEvents(), true);
       updateFlowFilterBar(flowFilterBar, flowFilters);
     } else if (currentTab === 5) {
-      // Tree tab
       latestTreeData = loadTreeData(jsonlInfo.projectDir, session.sessionId, jsonlInfo.jsonlPath);
       updateTreePanel(treePanel, latestTreeData);
     } else if (currentTab === 6) {
-      // Teams tab — Tree 데이터를 재사용해 4개 서브패널에 렌더링
       const treeData = loadTreeData(jsonlInfo.projectDir, session.sessionId, jsonlInfo.jsonlPath);
       const metrics = buildTeamsMetrics(treeData);
       updateTeamsPanels(teamsPanel, metrics);
@@ -356,6 +399,16 @@ function createApp(options = {}) {
       screen.focusPop();
     }
     screen.render();
+  }
+
+  function refreshThrottled() {
+    const now = Date.now();
+    if (now - lastRefreshAt < REFRESH_THROTTLE_MS) {
+      screen.render();
+      return;
+    }
+    lastRefreshAt = now;
+    setImmediate(refresh);
   }
 
   // Key bindings
@@ -386,41 +439,12 @@ function createApp(options = {}) {
     refresh();
   });
 
-  screen.key(['1'], () => {
-    if (helpVisible) return;
-    showTab(1);
-    refresh();
-  });
-
-  screen.key(['2'], () => {
-    if (helpVisible) return;
-    showTab(2);
-    refresh();
-  });
-
-  screen.key(['3'], () => {
-    if (helpVisible) return;
-    showTab(3);
-    refresh();
-  });
-
-  screen.key(['4'], () => {
-    if (helpVisible) return;
-    showTab(4);
-    refresh();
-  });
-
-  screen.key(['5'], () => {
-    if (helpVisible) return;
-    showTab(5);
-    refresh();
-  });
-
-  screen.key(['6'], () => {
-    if (helpVisible) return;
-    showTab(6);
-    refresh();
-  });
+  screen.key(['1'], () => { if (!helpVisible) showTab(1); });
+  screen.key(['2'], () => { if (!helpVisible) showTab(2); });
+  screen.key(['3'], () => { if (!helpVisible) showTab(3); });
+  screen.key(['4'], () => { if (!helpVisible) showTab(4); });
+  screen.key(['5'], () => { if (!helpVisible) showTab(5); });
+  screen.key(['6'], () => { if (!helpVisible) showTab(6); });
 
   screen.key(['up'], () => {
     if (helpVisible) { helpOverlay.scroll(-1); screen.render(); return; }
