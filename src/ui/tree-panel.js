@@ -44,8 +44,25 @@ function createTreePanel(screen) {
   };
 }
 
+function healthIcon(health) {
+  if (!health || health.status === 'ok') return null;
+  if (health.worstSeverity === 'critical') {
+    const stalled = health.signals.find((s) => s.type === 'stalled' && s.severity === 'critical');
+    if (stalled) return '{red-fg}⏸{/red-fg}';
+    return `{red-fg}${I.warn}{/red-fg}`;
+  }
+  if (health.worstSeverity === 'warning') {
+    const retry = health.signals.find((s) => s.type === 'retry-loop');
+    if (retry) return '{yellow-fg}♻{/yellow-fg}';
+    return '{yellow-fg}⏸{/yellow-fg}';
+  }
+  return null;
+}
+
 function nodeIcon(node) {
   if (node.kind === 'session') return `{cyan-fg}${I.session}{/cyan-fg}`;
+  const hi = healthIcon(node.health);
+  if (hi) return hi;
   if (node.diagnostics && node.diagnostics.errors && node.diagnostics.errors.length > 0) {
     return `{red-fg}${I.warn}{/red-fg}`;
   }
@@ -90,6 +107,28 @@ function buildTreePrefix(node, visibleMap) {
     }
   }
   return prefix;
+}
+
+function diagnoseSignals(signals) {
+  const types = signals.map((s) => s.type);
+  if (types.includes('internal-error')) return 'Anthropic 내부 오류. 메인 세션에서 직접 수행 또는 재호출 권장.';
+  if (types.includes('stalled')) return '출력이 멈춤. 프로세스 상태 확인 또는 인터럽트 후 재시도 권장.';
+  if (types.includes('retry-loop')) return '같은 입력으로 반복 호출. 다른 접근법 시도 또는 입력 재검토 권장.';
+  return null;
+}
+
+function formatHealthLines(health) {
+  if (!health) return [];
+  if (health.status === 'ok') return [`{bold}Health:{/bold} {green-fg}ok{/green-fg}`];
+  const sevColor = health.worstSeverity === 'critical' ? 'red-fg' : 'yellow-fg';
+  const lines = [`{bold}Health:{/bold} {${sevColor}}${health.status}{/${sevColor}}`];
+  for (const s of health.signals) {
+    const c = s.severity === 'critical' ? 'red-fg' : 'yellow-fg';
+    lines.push(`  {${c}}${s.type}{/${c}}: ${s.message}`);
+  }
+  const dx = diagnoseSignals(health.signals);
+  if (dx) lines.push(`{bold}Diagnosis:{/bold} ${dx}`);
+  return lines;
 }
 
 function topTools(toolsObj, limit = 4) {
@@ -185,8 +224,8 @@ function renderDetail(state, treeData) {
     const toolStr = topTools(node.tools, 8) || '(none)';
     lines.push(`{bold}Tools:{/bold} ${toolStr}`);
     const d = node.diagnostics || {};
-    if (d.lastActivity) {
-      const act = d.lastActivity.split('\n')[0].trim();
+    if (d.lastActivityText) {
+      const act = d.lastActivityText.split('\n')[0].trim();
       const trunc = act.length > 100 ? act.substring(0, 100) + '…' : act;
       lines.push(`{bold}Last activity:{/bold} {gray-fg}${trunc}{/gray-fg}`);
     }
@@ -196,6 +235,7 @@ function renderDetail(state, treeData) {
       const lastErr = d.errors[d.errors.length - 1].split('\n')[0].trim();
       lines.push(`  {red-fg}${I.warn} ${lastErr.substring(0, 120)}{/red-fg}`);
     }
+    lines.push(...formatHealthLines(node.health));
   }
   return lines.join('\n');
 }

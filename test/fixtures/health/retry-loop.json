@@ -1,0 +1,14 @@
+{
+  "id": "fixture-retry-loop",
+  "type": "researcher",
+  "isRunning": true,
+  "startTime": "2026-04-28T11:29:55Z",
+  "tools": { "Grep": 6 },
+  "diagnostics": {
+    "errors": [],
+    "deniedCount": 0,
+    "lastActivity": "2026-04-28T11:30:02Z",
+    "lastActivityText": "",
+    "repeatPattern": { "tool": "Grep", "count": 6 }
+  }
+}

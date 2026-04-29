@@ -44,6 +44,7 @@ Session status, tool usage, subagents, recap, cost at a glance.
 | **Header** | Session ID, model, elapsed time, idle time, context window usage bar |
 | **Tools & Files** | Tool call counts with percentages + Read/Write/Search activity bars |
 | **Subagents** | Running and completed subagents with type, duration, description |
+| **Sub-agent Health** | Per-session sub-agent diagnostics: internal-error / stalled / retry-loop signals |
 | **Recent Conversation** | User question + AI response summary pairs |
 | **Recap** | Context compaction history — token changes, user message summary, current work |
 | **Cost** | Today's total API cost |

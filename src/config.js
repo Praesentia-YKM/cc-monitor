@@ -37,6 +37,14 @@ module.exports = {
     bright: 'white',
   },
 
+  healthAnalyzer: {
+    stalledWarningSec: 300,
+    stalledCriticalSec: 600,
+    retryThresholdN: 3,
+    retryWithSameErrorN: 2,
+    topIssuesCount: 3,
+  },
+
   ICONS: {
     session: '\u25C9',    // ◉
     model: '\u2666',      // ♦

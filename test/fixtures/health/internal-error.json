@@ -1,0 +1,16 @@
+{
+  "id": "fixture-internal-error",
+  "type": "qa-manager",
+  "isRunning": false,
+  "startTime": "2026-04-28T11:23:00Z",
+  "endTime": "2026-04-28T11:23:48Z",
+  "elapsedMs": 48000,
+  "tools": {},
+  "diagnostics": {
+    "errors": ["Tool result missing due to internal error"],
+    "deniedCount": 0,
+    "lastActivity": "2026-04-28T11:23:48Z",
+    "lastActivityText": "",
+    "repeatPattern": null
+  }
+}

@@ -190,7 +190,7 @@ test('extractDiagnostics detects errors from tool_result', () => {
     { type: 'user', message: { content: [
       { type: 'tool_result', is_error: true, content: 'File exceeds 256KB limit' },
     ]}},
-    { type: 'assistant', message: { content: [
+    { type: 'assistant', timestamp: '2026-04-28T11:00:00Z', message: { content: [
       { type: 'text', text: 'Searching for files...' },
       { type: 'tool_use', name: 'Grep', input: {} },
     ]}},
@@ -198,7 +198,8 @@ test('extractDiagnostics detects errors from tool_result', () => {
   const diag = extractDiagnostics(entries);
   assert.strictEqual(diag.errors.length, 1);
   assert.ok(diag.errors[0].includes('256KB'));
-  assert.strictEqual(diag.lastActivity, 'Searching for files...');
+  assert.strictEqual(diag.lastActivity, '2026-04-28T11:00:00Z');
+  assert.strictEqual(diag.lastActivityText, 'Searching for files...');
 });
 
 test('extractDiagnostics detects denied tools', () => {
@@ -230,6 +231,7 @@ test('extractDiagnostics handles empty entries', () => {
   assert.strictEqual(diag.errors.length, 0);
   assert.strictEqual(diag.deniedCount, 0);
   assert.strictEqual(diag.lastActivity, '');
+  assert.strictEqual(diag.lastActivityText, '');
   assert.strictEqual(diag.repeatPattern, null);
 });
 

@@ -1,0 +1,16 @@
+{
+  "id": "fixture-clean",
+  "type": "product-owner",
+  "isRunning": false,
+  "startTime": "2026-04-28T11:25:00Z",
+  "endTime": "2026-04-28T11:30:00Z",
+  "elapsedMs": 300000,
+  "tools": { "Read": 4, "Write": 1 },
+  "diagnostics": {
+    "errors": [],
+    "deniedCount": 0,
+    "lastActivity": "2026-04-28T11:30:00Z",
+    "lastActivityText": "PRD 작성 완료",
+    "repeatPattern": null
+  }
+}

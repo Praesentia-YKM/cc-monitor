@@ -1,0 +1,14 @@
+{
+  "id": "fixture-stalled",
+  "type": "coder",
+  "isRunning": true,
+  "startTime": "2026-04-28T11:00:00Z",
+  "tools": { "Bash": 1 },
+  "diagnostics": {
+    "errors": [],
+    "deniedCount": 0,
+    "lastActivity": "2026-04-28T11:00:00Z",
+    "lastActivityText": "long-running-task",
+    "repeatPattern": null
+  }
+}

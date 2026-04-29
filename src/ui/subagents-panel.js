@@ -42,7 +42,7 @@ function formatDiagnosticLines(diag, isRunning) {
   if (!diag || !isRunning) return [];
 
   const hasProblem = diag.repeatPattern || diag.deniedCount > 0 || diag.errors.length > 0;
-  if (!hasProblem && !diag.lastActivity) return [];
+  if (!hasProblem && !diag.lastActivityText) return [];
 
   const lines = [];
 
@@ -57,8 +57,8 @@ function formatDiagnosticLines(diag, isRunning) {
     const firstLine = errMsg.split('\n')[0].trim();
     lines.push(`      {yellow-fg}${I.warn} ERR(${diag.errors.length})  ${firstLine}{/yellow-fg}`);
   }
-  if (diag.lastActivity) {
-    const firstLine = diag.lastActivity.split('\n')[0].trim();
+  if (diag.lastActivityText) {
+    const firstLine = diag.lastActivityText.split('\n')[0].trim();
     lines.push(`      {gray-fg}${I.read} ${firstLine}{/gray-fg}`);
   }
 
